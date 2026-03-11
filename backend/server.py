@@ -155,6 +155,138 @@ async def get_ephemeral_token():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+import asyncio
+import base64
+import json
+from fastapi import WebSocket, WebSocketDisconnect # type: ignore
+from google.genai import types # type: ignore
+
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    print("[WS] Client connected")
+
+    # Construct the Live endpoint configuration based on admin settings
+    config = types.LiveConnectConfig(
+        response_modalities=[types.Modality.AUDIO],
+        system_instruction=types.Content(
+            parts=[types.Part(text=live_config.get("system_prompt") or SOCRATIC_SYSTEM_PROMPT)]
+        ),
+        speech_config=types.SpeechConfig(
+            voice_config=types.VoiceConfig(
+                prebuilt_voice_config=types.PrebuiltVoiceConfig(
+                    voice_name=live_config.get("voice", "Puck")
+                )
+            )
+        )
+    )
+    
+    try:
+        async with client.aio.live.connect(model=live_config["model"], config=config) as session:
+            print("[WS] Gemini session established")
+            
+            async def receive_from_browser():
+                """Listen to the browser's WebSocket and forward to Gemini."""
+                try:
+                    while True:
+                        data = await websocket.receive_text()
+                        msg = json.loads(data)
+                        
+                        # Audio input
+                        if "audio" in msg:
+                            audio_b64 = msg["audio"]
+                            audio_bytes = base64.b64decode(audio_b64)
+                            await session.send_realtime_input(
+                                audio=types.Blob(data=audio_bytes, mime_type="audio/pcm;rate=16000")
+                            )
+                        # Text input
+                        elif "text" in msg:
+                            await session.send_realtime_input(text=msg["text"])
+                        # End of mic utterance (client sent end of stream)
+                        elif "audioStreamEnd" in msg:
+                            # Not strictly required but good for flushing if we needed it. No native counterpart in python SDK for flush explicitly
+                            pass
+                except WebSocketDisconnect:
+                    print("[WS] Browser disconnected")
+                except asyncio.CancelledError:
+                    pass
+                except Exception as e:
+                    print(f"[WS] Error receiving from browser: {e}")
+
+            async def receive_from_gemini():
+                """Listen to Gemini and forward back to the browser's WebSocket."""
+                try:
+                    async for response in session.receive():
+                        server_content = response.server_content
+                        if not server_content:
+                            continue
+                            
+                        # Extract audio data
+                        if server_content.model_turn:
+                            for part in server_content.model_turn.parts:
+                                if part.inline_data:
+                                    audio_b64 = base64.b64encode(part.inline_data.data).decode("utf-8")
+                                    await websocket.send_json({
+                                        "type": "audio",
+                                        "data": audio_b64
+                                    })
+                                    
+                        # Extract transcriptions
+                        if server_content.input_transcription:
+                            await websocket.send_json({
+                                "type": "transcript",
+                                "role": "user",
+                                "text": server_content.input_transcription.text
+                            })
+                            
+                        if server_content.output_transcription:
+                            await websocket.send_json({
+                                "type": "transcript",
+                                "role": "assistant",
+                                "text": server_content.output_transcription.text
+                            })
+                            
+                        # Extract interruption events
+                        if server_content.interrupted:
+                            await websocket.send_json({"type": "interrupted"})
+                            
+                        # Extract turn complete events
+                        if server_content.turn_complete:
+                            await websocket.send_json({"type": "turnComplete"})
+                            
+                except asyncio.CancelledError:
+                    pass
+                except Exception as e:
+                    print(f"[WS] Error receiving from Gemini: {e}")
+                    try:
+                        await websocket.send_json({"type": "error", "message": f"Gemini Error: {e}"})
+                    except:
+                        pass
+
+            # Run both loops simultaneously
+            t1 = asyncio.create_task(receive_from_browser())
+            t2 = asyncio.create_task(receive_from_gemini())
+            
+            done, pending = await asyncio.wait([t1, t2], return_when=asyncio.FIRST_COMPLETED)
+            
+            # Cancel the remaining task
+            for task in pending:
+                task.cancel()
+                
+    except Exception as e:
+        print(f"[WS] Failed to connect to Gemini: {e}")
+        try:
+            await websocket.send_json({"type": "error", "message": f"Connection failed: {e}"})
+        except:
+            pass
+    finally:
+        print("[WS] Connection closed")
+        try:
+            await websocket.close()
+        except:
+            pass
+
+
 @app.get("/health")
 async def health():
     return {"status": "ok"}
