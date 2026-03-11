@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { auth, markOnboardingComplete, onAuthStateChanged, getUserDoc } from '@/services/FirebaseService'
 import useAppStore from '@/store/useAppStore'
+import { motion } from 'framer-motion'
 
 export default function OnboardingPage() {
   const router = useRouter()
@@ -41,7 +42,12 @@ export default function OnboardingPage() {
 
   if (step === 1) {
     return (
-      <div className="relative flex h-screen w-full flex-col bg-[#0a0a0a] overflow-x-hidden">
+      <motion.div 
+        initial={{ opacity: 0, filter: 'blur(10px)' }} 
+        animate={{ opacity: 1, filter: 'blur(0px)' }} 
+        transition={{ duration: 0.6, ease: "easeOut" }}
+        className="relative flex h-screen w-full flex-col bg-[#0a0a0a] overflow-x-hidden"
+      >
         {/* Mesh Background */}
         <div className="fixed inset-0 pointer-events-none" style={{
           backgroundImage: `
@@ -91,8 +97,8 @@ export default function OnboardingPage() {
                     <span className="text-slate-400 text-sm font-medium">Step 1 of 3</span>
                     <span className="text-primary text-sm font-bold">33%</span>
                   </div>
-                  <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
-                    <div className="h-full bg-primary w-1/3 rounded-full shadow-[0_0_15px_rgba(129,140,248,0.5)]"></div>
+                  <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden relative">
+                    <motion.div layoutId="onboardingProgress" className="absolute left-0 top-0 h-full bg-primary rounded-full shadow-[0_0_15px_rgba(129,140,248,0.5)]" style={{ width: '33%' }}></motion.div>
                   </div>
                 </div>
                 <div className="flex items-center justify-between pt-4">
@@ -114,13 +120,18 @@ export default function OnboardingPage() {
             </p>
           </footer>
         </div>
-      </div>
+      </motion.div>
     )
   }
 
   if (step === 2) {
     return (
-      <div className="relative flex h-auto min-h-screen w-full flex-col bg-[#0a0a0a] overflow-x-hidden">
+      <motion.div 
+        initial={{ opacity: 0, filter: 'blur(10px)' }} 
+        animate={{ opacity: 1, filter: 'blur(0px)' }} 
+        transition={{ duration: 0.6, ease: "easeOut" }}
+        className="relative flex h-auto min-h-screen w-full flex-col bg-[#0a0a0a] overflow-x-hidden"
+      >
         <div className="layout-container flex h-full grow flex-col relative z-10">
           <header className="flex items-center justify-between border-b border-white/5 px-6 py-4 md:px-20 lg:px-40">
             <div className="flex items-center gap-3">
@@ -146,8 +157,8 @@ export default function OnboardingPage() {
                   </div>
                   <p className="text-slate-400 text-sm font-medium">66% Complete</p>
                 </div>
-                <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
-                  <div className="h-full bg-primary rounded-full transition-all duration-500 shadow-[0_0_15px_rgba(129,140,248,0.5)]" style={{ width: '66%' }}></div>
+                <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden relative">
+                  <motion.div layoutId="onboardingProgress" className="absolute left-0 top-0 h-full bg-primary rounded-full shadow-[0_0_15px_rgba(129,140,248,0.5)]" style={{ width: '66%' }}></motion.div>
                 </div>
                 <p className="text-slate-400 text-base">Our AI-driven process maps your core beliefs through a structured cognitive journey.</p>
               </div>
@@ -203,13 +214,18 @@ export default function OnboardingPage() {
           <div className="fixed top-1/4 -right-24 w-96 h-96 bg-primary/5 rounded-full blur-[120px] pointer-events-none"></div>
           <div className="fixed bottom-1/4 -left-24 w-96 h-96 bg-primary/5 rounded-full blur-[120px] pointer-events-none"></div>
         </div>
-      </div>
+      </motion.div>
     )
   }
 
   // Step 3
   return (
-    <div className="relative flex min-h-screen w-full flex-col bg-[#0a0a0a] overflow-x-hidden">
+    <motion.div 
+      initial={{ opacity: 0, filter: 'blur(10px)' }} 
+      animate={{ opacity: 1, filter: 'blur(0px)' }} 
+      transition={{ duration: 0.6, ease: "easeOut" }}
+      className="relative flex min-h-screen w-full flex-col bg-[#0a0a0a] overflow-x-hidden"
+    >
       <div className="layout-container flex h-full grow flex-col relative z-10">
         <header className="flex items-center justify-between px-6 py-6 md:px-20 lg:px-40">
           <div className="flex items-center gap-2">
@@ -257,20 +273,7 @@ export default function OnboardingPage() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between p-4 rounded-xl hover:bg-white/5 transition-colors opacity-50">
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10 text-primary">
-                    <span className="material-symbols-outlined leading-none">fingerprint</span>
-                  </div>
-                  <div className="text-left">
-                    <p className="text-slate-100 font-medium text-sm">Biometric Lock</p>
-                    <p className="text-slate-500 text-xs mt-0.5">Require authentication to open app</p>
-                  </div>
-                </div>
-                <div className="w-11 h-6 bg-white/10 rounded-full relative">
-                  <div className="absolute left-1 top-1 w-4 h-4 bg-white/50 rounded-full"></div>
-                </div>
-              </div>
+              {/* Biometric lock removed per user request */}
 
               <div className="flex items-center justify-between p-4 rounded-xl hover:bg-white/5 transition-colors">
                 <div className="flex items-center gap-4">
@@ -311,6 +314,6 @@ export default function OnboardingPage() {
         <div className="fixed top-1/4 -left-64 w-96 h-96 bg-primary/5 blur-[120px] rounded-full pointer-events-none"></div>
         <div className="fixed bottom-1/4 -right-64 w-96 h-96 bg-primary/5 blur-[120px] rounded-full pointer-events-none"></div>
       </div>
-    </div>
+    </motion.div>
   )
 }

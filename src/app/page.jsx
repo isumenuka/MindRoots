@@ -7,6 +7,7 @@ import useAppStore from '@/store/useAppStore'
 export default function LandingPage() {
   const router = useRouter()
   const setUser = useAppStore(s => s.setUser)
+  const user = useAppStore(s => s.user)
   const [signingIn, setSigningIn] = useState(false)
   const [error, setError] = useState(null)
 
@@ -40,8 +41,15 @@ export default function LandingPage() {
     setSigningIn(true)
     setError(null)
     try {
-      await signInWithGoogle()
+      const resultUser = await signInWithGoogle()
+      const userDoc = await getUserDoc(resultUser.uid)
+      if (userDoc && !userDoc.onboarding_complete) {
+        router.push('/onboarding')
+      } else {
+        router.push('/interview')
+      }
     } catch (err) {
+      console.error(err)
       setError('Sign in failed — please try again.')
       setSigningIn(false)
     }
@@ -65,20 +73,41 @@ export default function LandingPage() {
             <span className="text-lg sm:text-xl font-display font-bold tracking-tight text-white">MindRoots</span>
           </div>
           <div className="flex items-center gap-3 sm:gap-4">
-            <button
-              onClick={handleSignIn}
-              disabled={signingIn}
-              className="text-xs sm:text-sm font-medium text-slate-400 hover:text-white transition-colors"
-            >
-              Sign In
-            </button>
-            <button
-              onClick={handleSignIn}
-              disabled={signingIn}
-              className="bg-white text-black text-xs sm:text-sm font-semibold px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl hover:bg-slate-100 transition-all shadow-lg shadow-white/10"
-            >
-              {signingIn ? 'Signing in...' : 'Get Started'}
-            </button>
+            {user ? (
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={handleSignIn}
+                  disabled={signingIn}
+                  className="bg-white text-black text-xs sm:text-sm font-semibold px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl hover:bg-slate-100 transition-all shadow-lg shadow-white/10"
+                >
+                  {signingIn ? 'Loading...' : 'Go to Dashboard'}
+                </button>
+                {user.photoURL ? (
+                  <img src={user.photoURL} alt="Profile" className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 border-[#818CF8] object-cover" />
+                ) : (
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-slate-800 flex items-center justify-center border-2 border-[#818CF8]">
+                    <span className="text-white text-sm font-bold uppercase">{user.email?.[0] || 'U'}</span>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <>
+                <button
+                  onClick={handleSignIn}
+                  disabled={signingIn}
+                  className="text-xs sm:text-sm font-medium text-slate-400 hover:text-white transition-colors"
+                >
+                  Sign In
+                </button>
+                <button
+                  onClick={handleSignIn}
+                  disabled={signingIn}
+                  className="bg-white text-black text-xs sm:text-sm font-semibold px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl hover:bg-slate-100 transition-all shadow-lg shadow-white/10"
+                >
+                  {signingIn ? 'Signing in...' : 'Get Started'}
+                </button>
+              </>
+            )}
           </div>
         </div>
       </nav>
@@ -107,14 +136,23 @@ export default function LandingPage() {
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <button
-              onClick={handleSignIn}
+              onClick={() => {
+                if (user) {
+                  handleSignIn()
+                } else {
+                  document.getElementById('signup-cta')?.scrollIntoView({ behavior: 'smooth' })
+                }
+              }}
               disabled={signingIn}
               className="w-full sm:w-auto px-8 py-4 bg-white text-black font-semibold rounded-xl flex items-center justify-center gap-2 hover:scale-105 transition-transform shadow-xl shadow-white/10 disabled:opacity-60"
             >
-              {signingIn ? 'Opening...' : 'Begin Your Excavation'}
+              {signingIn ? 'Opening...' : (user ? 'Continue to Dashboard' : 'Begin Your Excavation')}
               <span className="material-symbols-outlined text-lg">arrow_outward</span>
             </button>
-            <button className="w-full sm:w-auto px-8 py-4 bg-white/5 border border-white/10 text-white font-medium rounded-xl hover:bg-white/10 transition-colors">
+            <button 
+              onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })} 
+              className="w-full sm:w-auto px-8 py-4 bg-white/5 border border-white/10 text-white font-medium rounded-xl hover:bg-white/10 transition-colors"
+            >
               How it works
             </button>
           </div>
@@ -147,7 +185,7 @@ export default function LandingPage() {
       </section>
 
       {/* 3-Step How it works */}
-      <section className="py-20 max-w-7xl mx-auto px-6">
+      <section id="how-it-works" className="py-20 max-w-7xl mx-auto px-6">
         <div className="text-center mb-14">
           <h2 className="text-3xl md:text-4xl font-display font-bold text-white mb-4">How it works</h2>
           <p className="text-slate-500 max-w-xl mx-auto">Three AI agents working in sequence to excavate, structure, and illustrate your inner world.</p>
@@ -173,7 +211,7 @@ export default function LandingPage() {
       </section>
 
       {/* Sign-up CTA */}
-      <section className="py-20 max-w-7xl mx-auto px-6">
+      <section id="signup-cta" className="py-20 max-w-7xl mx-auto px-6">
         <div className="glass-card rounded-3xl overflow-hidden grid lg:grid-cols-2">
           <div className="p-12 md:p-16 flex flex-col justify-center">
             <h2 className="text-4xl md:text-5xl font-display font-bold text-white mb-6">Ready to dig deeper?</h2>
