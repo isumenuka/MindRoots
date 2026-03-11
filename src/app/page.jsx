@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { auth, signInWithGoogle, onAuthStateChanged, getUserDoc } from '@/services/FirebaseService'
 import useAppStore from '@/store/useAppStore'
 
@@ -76,19 +77,20 @@ export default function LandingPage() {
             {user ? (
               <div className="flex items-center gap-4">
                 <button
-                  onClick={handleSignIn}
-                  disabled={signingIn}
+                  onClick={() => router.push('/settings')}
                   className="bg-white text-black text-xs sm:text-sm font-semibold px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl hover:bg-slate-100 transition-all shadow-lg shadow-white/10"
                 >
-                  {signingIn ? 'Loading...' : 'Go to Dashboard'}
+                  Go to Dashboard
                 </button>
-                {user.photoURL ? (
-                  <img src={user.photoURL} alt="Profile" className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 border-[#818CF8] object-cover" />
-                ) : (
-                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-slate-800 flex items-center justify-center border-2 border-[#818CF8]">
-                    <span className="text-white text-sm font-bold uppercase">{user.email?.[0] || 'U'}</span>
-                  </div>
-                )}
+                <Link href="/settings" className="hover:scale-105 transition-transform block">
+                  {user.photoURL ? (
+                    <img src={user.photoURL} alt="Profile" referrerPolicy="no-referrer" className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 border-[#818CF8] object-cover" />
+                  ) : (
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-slate-800 flex items-center justify-center border-2 border-[#818CF8]">
+                      <span className="text-white text-sm font-bold uppercase">{user.email?.[0] || 'U'}</span>
+                    </div>
+                  )}
+                </Link>
               </div>
             ) : (
               <>

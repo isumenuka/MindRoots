@@ -18,6 +18,11 @@ const auth = getAuth(app)
 const db = getFirestore(app)
 const googleProvider = new GoogleAuthProvider()
 
+// Force the account selection prompt every time the user signs in
+googleProvider.setCustomParameters({
+  prompt: 'select_account'
+})
+
 // Auth helpers
 async function signInWithGoogle() {
   try {
