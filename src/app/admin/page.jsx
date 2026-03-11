@@ -9,7 +9,7 @@ const ADMIN_UIDS = (process.env.NEXT_PUBLIC_ADMIN_UIDS || '').split(',').map(s =
 
 const VOICES = ['Aoede', 'Charon', 'Fenrir', 'Kore', 'Puck', 'Orbit', 'Zephyr', 'Leda']
 const MODELS = [
-  'gemini-2.0-flash-exp',
+  'gemini-2.5-flash-native-audio-preview-12-2025',
 ]
 
 const Section = ({ title, icon, children, defaultOpen = true }) => {
@@ -67,14 +67,18 @@ export default function AdminPage() {
 
   const [cfg, setCfg] = useState({
     model: MODELS[0],
-    voice: 'Kore',
+    voice: 'Puck',
     temperature: 1.0,
     max_excavations: 5,
     enable_affective_dialog: true,
     enable_proactive_audio: true,
-    vad_start_sensitivity: 'LOW',
-    vad_end_sensitivity: 'LOW',
-    vad_silence_duration_ms: 2000,
+    enable_google_grounding: false,
+    enable_input_transcription: true,
+    enable_output_transcription: true,
+    vad_start_sensitivity: 'DEFAULT',
+    vad_end_sensitivity: 'DEFAULT',
+    vad_silence_duration_ms: 500,
+    vad_prefix_padding_ms: 500,
     system_prompt: '',
   })
 
@@ -108,9 +112,13 @@ export default function AdminPage() {
         max_excavations: data.max_excavations ?? prev.max_excavations,
         enable_affective_dialog: data.enable_affective_dialog ?? prev.enable_affective_dialog,
         enable_proactive_audio: data.enable_proactive_audio ?? prev.enable_proactive_audio,
+        enable_google_grounding: data.enable_google_grounding ?? prev.enable_google_grounding,
+        enable_input_transcription: data.enable_input_transcription ?? prev.enable_input_transcription,
+        enable_output_transcription: data.enable_output_transcription ?? prev.enable_output_transcription,
         vad_start_sensitivity: data.vad_start_sensitivity ?? prev.vad_start_sensitivity,
         vad_end_sensitivity: data.vad_end_sensitivity ?? prev.vad_end_sensitivity,
         vad_silence_duration_ms: data.vad_silence_duration_ms ?? prev.vad_silence_duration_ms,
+        vad_prefix_padding_ms: data.vad_prefix_padding_ms ?? prev.vad_prefix_padding_ms,
         system_prompt: data.system_prompt ?? '',
       }))
       setBackendDown(false)
@@ -133,6 +141,7 @@ export default function AdminPage() {
         temperature: parseFloat(cfg.temperature),
         max_excavations: parseInt(cfg.max_excavations),
         vad_silence_duration_ms: parseInt(cfg.vad_silence_duration_ms),
+        vad_prefix_padding_ms: parseInt(cfg.vad_prefix_padding_ms),
       }
       const res = await fetch(`${BACKEND}/api/config`, {
         method: 'POST',
@@ -267,6 +276,15 @@ export default function AdminPage() {
             <div className="space-y-1 pt-1">
               <Toggle value={cfg.enable_proactive_audio} onChange={v => set('enable_proactive_audio', v)} label="Enable proactive audio" />
               <Toggle value={cfg.enable_affective_dialog} onChange={v => set('enable_affective_dialog', v)} label="Enable affective dialog (emotion detection)" />
+              <Toggle value={cfg.enable_google_grounding} onChange={v => set('enable_google_grounding', v)} label="Enable Google grounding" />
+            </div>
+          </Section>
+
+          {/* Transcription Settings */}
+          <Section title="Transcription Settings" icon="closed_caption">
+            <div className="space-y-1">
+              <Toggle value={cfg.enable_input_transcription} onChange={v => set('enable_input_transcription', v)} label="Enable input transcription (your speech)" />
+              <Toggle value={cfg.enable_output_transcription} onChange={v => set('enable_output_transcription', v)} label="Enable output transcription (Gemini responses)" />
             </div>
           </Section>
 
@@ -276,7 +294,7 @@ export default function AdminPage() {
               <div>
                 <Label hint="How easily speech START is detected">Start Sensitivity</Label>
                 <div className="flex gap-2">
-                  {['LOW', 'HIGH'].map(s => (
+                  {['DEFAULT', 'LOW', 'HIGH'].map(s => (
                     <button key={s} onClick={() => set('vad_start_sensitivity', s)}
                       className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all border ${cfg.vad_start_sensitivity === s
                         ? 'bg-[#818CF8]/25 border-[#818CF8]/60 text-[#818CF8]'
@@ -289,7 +307,7 @@ export default function AdminPage() {
               <div>
                 <Label hint="How easily speech END is detected">End Sensitivity</Label>
                 <div className="flex gap-2">
-                  {['LOW', 'HIGH'].map(s => (
+                  {['DEFAULT', 'LOW', 'HIGH'].map(s => (
                     <button key={s} onClick={() => set('vad_end_sensitivity', s)}
                       className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all border ${cfg.vad_end_sensitivity === s
                         ? 'bg-[#818CF8]/25 border-[#818CF8]/60 text-[#818CF8]'
@@ -312,6 +330,20 @@ export default function AdminPage() {
               />
               <div className="flex justify-between text-xs text-slate-600 mt-1">
                 <span>500ms Fast</span><span>2000ms Default</span><span>5000ms Slow</span>
+              </div>
+            </div>
+            <div className="mt-4">
+              <Label hint="Milliseconds of audio to pad at the start of a speech turn">
+                Prefix Padding: {cfg.vad_prefix_padding_ms}ms
+              </Label>
+              <input
+                type="range" min="100" max="2000" step="100"
+                value={cfg.vad_prefix_padding_ms}
+                onChange={e => set('vad_prefix_padding_ms', e.target.value)}
+                className="w-full accent-[#818CF8]"
+              />
+              <div className="flex justify-between text-xs text-slate-600 mt-1">
+                <span>100ms</span><span>500ms Default</span><span>2000ms</span>
               </div>
             </div>
           </Section>

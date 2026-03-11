@@ -32,7 +32,7 @@ export default function InterviewPage() {
   const sessionCreatedRef = useRef(false)
 
   const { isCapturing, hasPermission, error: micErr, start: startMic, stop: stopMic, getAnalyser: getMicAnalyser } = useMicrophone()
-  const { playChunk, stopPlayback, stop: stopPlayer, getAnalyser: getPlayerAnalyser } = useAudioPlayer()
+  const { init: initAudioPlayer, playChunk, stopPlayback, stop: stopPlayer, getAnalyser: getPlayerAnalyser } = useAudioPlayer()
 
   // Auth guard
   useEffect(() => {
@@ -59,7 +59,7 @@ export default function InterviewPage() {
       setIsInterviewing(true)
 
       // Pre-warm the audio worklet so it doesn't drop the first chunk
-      await audioPlayer.init()
+      await initAudioPlayer()
 
       // Initialize Gemini Live
       const svc = new GeminiLiveService()

@@ -29,20 +29,24 @@ if not GEMINI_API_KEY:
 ADMIN_SECRET = os.environ.get("ADMIN_SECRET", "mindroots-admin-2025")
 
 # Use a stable known model for Live API bidi generation
-LIVE_MODEL = "gemini-2.0-flash-exp"
+LIVE_MODEL = "gemini-2.5-flash-native-audio-preview-12-2025"
 COMPLETION_PHRASE = "your belief map is now being drawn"
 
 # ─── Live config (mutable — updated by admin dashboard, no restart needed) ──
 live_config: dict = {
     "model": LIVE_MODEL,
-    "voice": "Kore",
+    "voice": "Puck",
     "temperature": 1.0,
     "max_excavations": 5,
     "enable_affective_dialog": True,
     "enable_proactive_audio": True,
-    "vad_start_sensitivity": "LOW",   # LOW | HIGH
-    "vad_end_sensitivity": "LOW",     # LOW | HIGH
-    "vad_silence_duration_ms": 2000,
+    "enable_google_grounding": False,
+    "enable_input_transcription": True,
+    "enable_output_transcription": True,
+    "vad_start_sensitivity": "DEFAULT",   # DEFAULT | LOW | HIGH
+    "vad_end_sensitivity": "DEFAULT",     # DEFAULT | LOW | HIGH
+    "vad_silence_duration_ms": 500,
+    "vad_prefix_padding_ms": 500,
     "system_prompt": None,  # None = use SOCRATIC_SYSTEM_PROMPT default
 }
 
@@ -102,9 +106,13 @@ class ConfigUpdate(BaseModel):
     max_excavations: Optional[int] = None
     enable_affective_dialog: Optional[bool] = None
     enable_proactive_audio: Optional[bool] = None
+    enable_google_grounding: Optional[bool] = None
+    enable_input_transcription: Optional[bool] = None
+    enable_output_transcription: Optional[bool] = None
     vad_start_sensitivity: Optional[str] = None
     vad_end_sensitivity: Optional[str] = None
     vad_silence_duration_ms: Optional[int] = None
+    vad_prefix_padding_ms: Optional[int] = None
     system_prompt: Optional[str] = None
 
 
@@ -160,37 +168,52 @@ async def gemini_live_proxy(ws: WebSocket):
     cfg = dict(live_config)
     system_prompt_text = cfg.get("system_prompt") or SOCRATIC_SYSTEM_PROMPT
 
-    start_sens = (types.StartSensitivity.START_SENSITIVITY_LOW
-                  if cfg.get("vad_start_sensitivity", "LOW") == "LOW"
-                  else types.StartSensitivity.START_SENSITIVITY_HIGH)
-    end_sens   = (types.EndSensitivity.END_SENSITIVITY_LOW
-                  if cfg.get("vad_end_sensitivity", "LOW") == "LOW"
-                  else types.EndSensitivity.END_SENSITIVITY_HIGH)
+    start_str = cfg.get("vad_start_sensitivity", "DEFAULT")
+    end_str = cfg.get("vad_end_sensitivity", "DEFAULT")
 
-    session_config = types.LiveConnectConfig(
-        response_modalities=[types.Modality.AUDIO],
+    if start_str == "LOW":
+        start_sens = types.StartSensitivity.START_SENSITIVITY_LOW
+    elif start_str == "HIGH":
+        start_sens = types.StartSensitivity.START_SENSITIVITY_HIGH
+    else:
+        start_sens = types.StartSensitivity.START_SENSITIVITY_UNSPECIFIED
+
+    if end_str == "LOW":
+        end_sens = types.EndSensitivity.END_SENSITIVITY_LOW
+    elif end_str == "HIGH":
+        end_sens = types.EndSensitivity.END_SENSITIVITY_HIGH
+    else:
+        end_sens = types.EndSensitivity.END_SENSITIVITY_UNSPECIFIED
+
+    tools = []
+    if cfg.get("enable_google_grounding"):
+        tools.append(types.Tool(google_search=types.GoogleSearch()))  # type: ignore
+
+    session_config = types.LiveConnectConfig( # type: ignore
+        response_modalities=[types.LiveOutputModality.AUDIO], # type: ignore
         system_instruction=types.Content(
             parts=[types.Part(text=system_prompt_text)]
         ),
-        speech_config=types.SpeechConfig(
-            voice_config=types.VoiceConfig(
-                prebuilt_voice_config=types.PrebuiltVoiceConfig(
+        tools=tools if tools else None,
+        speech_config=types.SpeechConfig( # type: ignore
+            voice_config=types.VoiceConfig( # type: ignore
+                prebuilt_voice_config=types.PrebuiltVoiceConfig( # type: ignore
                     voice_name=cfg.get("voice", "Kore")
                 )
             )
         ),
-        input_audio_transcription=types.AudioTranscriptionConfig(),
-        output_audio_transcription=types.AudioTranscriptionConfig(),
+        input_audio_transcription=types.AudioTranscriptionConfig() if cfg.get("enable_input_transcription", True) else None, # type: ignore
+        output_audio_transcription=types.AudioTranscriptionConfig() if cfg.get("enable_output_transcription", True) else None, # type: ignore
         enable_affective_dialog=cfg.get("enable_affective_dialog", True),
-        proactivity=types.ProactivityConfig(
+        proactivity=types.ProactivityConfig( # type: ignore
             proactive_audio=cfg.get("enable_proactive_audio", True)
         ),
-        realtime_input_config=types.RealtimeInputConfig(
-            automatic_activity_detection=types.AutomaticActivityDetection(
+        realtime_input_config=types.RealtimeInputConfig( # type: ignore
+            automatic_activity_detection=types.AutomaticActivityDetection( # type: ignore
                 start_of_speech_sensitivity=start_sens,
                 end_of_speech_sensitivity=end_sens,
-                silence_duration_ms=cfg.get("vad_silence_duration_ms", 2000),
-                prefix_padding_ms=300,
+                silence_duration_ms=cfg.get("vad_silence_duration_ms", 500),
+                prefix_padding_ms=cfg.get("vad_prefix_padding_ms", 500),
             )
         ),
     )
