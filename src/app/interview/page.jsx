@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import { auth, onAuthStateChanged, createSession, saveBelief, updateSessionStatus } from '@/services/FirebaseService'
 import GeminiLiveService from '@/services/GeminiLiveService'
@@ -21,8 +22,11 @@ export default function InterviewPage() {
   const [agentStatus, setAgentStatus] = useState('connecting') // connecting | active | speaking | listening | ending
   const [showEndConfirm, setShowEndConfirm] = useState(false)
   const [showTranscript, setShowTranscript] = useState(false)
+  const [showTextInput, setShowTextInput] = useState(false)
+  const [textInput, setTextInput] = useState('')
   const [micError, setMicError] = useState(null)
   const [transcriptScrollRef] = useState(() => ({ current: null }))
+  const textInputRef = useRef(null)
 
   const liveServiceRef = useRef(null)
   const sessionCreatedRef = useRef(false)
@@ -130,6 +134,22 @@ export default function InterviewPage() {
     }
   }, [transcript])
 
+  // Focus text input when shown
+  useEffect(() => {
+    if (showTextInput && textInputRef.current) {
+      textInputRef.current.focus()
+    }
+  }, [showTextInput])
+
+  const handleSendText = () => {
+    const msg = textInput.trim()
+    if (!msg) return
+    addTranscriptEntry({ role: 'user', text: msg })
+    setTextInput('')
+    // Show the conversation panel automatically so user sees their message
+    setShowTranscript(true)
+  }
+
   const handleEndSession = async () => {
     setShowEndConfirm(false)
     setAgentStatus('ending')
@@ -218,70 +238,146 @@ export default function InterviewPage() {
         </div>
       </main>
 
-      {/* Transcript Panel */}
-      <section className="relative z-10 p-6 lg:p-8 max-w-5xl mx-auto w-full mb-8">
-        <div ref={(el) => { transcriptScrollRef.current = el }} className="frosted-glass rounded-xl p-6 lg:p-8 max-h-[300px] overflow-y-auto flex flex-col gap-8 custom-scrollbar">
-          {transcript.length === 0 ? (
-            <p className="text-slate-500 text-sm italic text-center py-4">Conversation will appear here...</p>
-          ) : (
-            transcript.map((entry, i) => (
-              <div key={i} className={`flex gap-4 max-w-3xl ${entry.role === 'user' ? 'ml-auto flex-row-reverse' : ''}`}>
-                <div className={`flex-shrink-0 size-10 rounded-full flex items-center justify-center border ${
-                  entry.role === 'assistant'
-                    ? 'bg-accent/20 border-accent/30 text-accent'
-                    : 'bg-white/10 border-white/20'
-                }`}>
-                  <span className="material-symbols-outlined text-[20px]">
-                    {entry.role === 'assistant' ? 'smart_toy' : 'person'}
-                  </span>
+      {/* Conversation Panel — toggleable */}
+      <AnimatePresence>
+        {showTranscript && (
+          <motion.section
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 24 }}
+            transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
+            className="relative z-10 px-6 lg:px-8 max-w-3xl mx-auto w-full mb-4"
+          >
+            <div
+              ref={(el) => { transcriptScrollRef.current = el }}
+              className="bg-white/[0.06] backdrop-blur-xl border border-white/10 rounded-2xl p-5 max-h-[260px] overflow-y-auto flex flex-col gap-5"
+            >
+              {transcript.length === 0 ? (
+                <p className="text-slate-500 text-sm italic text-center py-4">Conversation will appear here...</p>
+              ) : (
+                transcript.map((entry, i) => (
+                  <div key={i} className={`flex gap-3 ${entry.role === 'user' ? 'flex-row-reverse' : ''}`}>
+                    {/* Avatar */}
+                    <div className={`shrink-0 size-8 rounded-full flex items-center justify-center border ${
+                      entry.role === 'assistant'
+                        ? 'bg-[#818CF8]/20 border-[#818CF8]/30 text-[#818CF8]'
+                        : 'bg-white/10 border-white/20'
+                    }`}>
+                      {entry.role === 'assistant' ? (
+                        <span className="material-symbols-outlined text-[16px]">psychology</span>
+                      ) : user?.photoURL ? (
+                        <img src={user.photoURL} alt="" className="w-full h-full object-cover rounded-full" referrerPolicy="no-referrer" />
+                      ) : (
+                        <span className="material-symbols-outlined text-[16px]">person</span>
+                      )}
+                    </div>
+                    {/* Bubble */}
+                    <div className={`flex flex-col gap-1 max-w-[75%] ${entry.role === 'user' ? 'items-end' : ''}`}>
+                      <span className={`text-[10px] uppercase tracking-widest font-bold ${
+                        entry.role === 'assistant' ? 'text-[#818CF8]' : 'text-slate-500'
+                      }`}>
+                        {entry.role === 'assistant' ? 'Agent' : 'You'}
+                      </span>
+                      <p className={`text-sm leading-relaxed ${
+                        entry.role === 'user' ? 'text-white text-right' : 'text-slate-200'
+                      }`}>
+                        {entry.text}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              )}
+              {/* Typing indicator */}
+              {agentStatus === 'speaking' && (
+                <div className="flex gap-3">
+                  <div className="shrink-0 size-8 rounded-full bg-[#818CF8]/20 border border-[#818CF8]/30 flex items-center justify-center">
+                    <span className="material-symbols-outlined text-[#818CF8] text-[16px]">psychology</span>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[10px] uppercase tracking-widest font-bold text-[#818CF8]">Agent</span>
+                    <div className="flex gap-1.5 items-center mt-1">
+                      <div className="size-1.5 rounded-full bg-[#818CF8]/60 animate-bounce" style={{animationDelay:'0ms'}} />
+                      <div className="size-1.5 rounded-full bg-[#818CF8]/60 animate-bounce" style={{animationDelay:'150ms'}} />
+                      <div className="size-1.5 rounded-full bg-[#818CF8]/60 animate-bounce" style={{animationDelay:'300ms'}} />
+                    </div>
+                  </div>
                 </div>
-                <div className={`flex flex-col gap-2 ${entry.role === 'user' ? 'items-end' : ''}`}>
-                  <span className={`text-[11px] uppercase tracking-widest font-bold ${entry.role === 'assistant' ? 'text-accent' : 'text-slate-500'}`}>
-                    {entry.role === 'assistant' ? 'Agent' : 'You'}
-                  </span>
-                  <p className={`text-[17px] leading-relaxed ${entry.role === 'user' ? 'text-right text-white' : 'text-slate-200'}`}>
-                    {entry.text}
-                  </p>
-                </div>
-              </div>
-            ))
-          )}
-          {agentStatus === 'speaking' && (
-            <div className="flex gap-4 max-w-3xl">
-              <div className="flex-shrink-0 size-10 rounded-full bg-accent/20 flex items-center justify-center border border-accent/30">
-                <span className="material-symbols-outlined text-accent text-[20px]">smart_toy</span>
-              </div>
-              <div className="flex flex-col gap-2">
-                <span className="text-[11px] uppercase tracking-widest font-bold text-accent">Agent</span>
-                <div className="flex gap-1.5 items-center mt-1">
-                  <div className="size-1.5 rounded-full bg-accent/60 animate-pulse"></div>
-                  <div className="size-1.5 rounded-full bg-accent/60 animate-pulse delay-75"></div>
-                  <div className="size-1.5 rounded-full bg-accent/60 animate-pulse delay-150"></div>
-                </div>
-              </div>
+              )}
             </div>
-          )}
-        </div>
-      </section>
+          </motion.section>
+        )}
+      </AnimatePresence>
 
       {/* Footer mic controls */}
-      <footer className="relative z-10 flex items-center justify-center pb-8 px-6">
-        <div className="flex gap-4">
+      <footer className="relative z-10 flex flex-col items-center gap-4 pb-10 px-6">
+        <div className="flex gap-3 items-center">
+          {/* Mic */}
           <button
             onClick={() => isCapturing ? stopMic() : startMic((pcm16) => liveServiceRef.current?.sendAudio(pcm16))}
             className={`size-14 rounded-full flex items-center justify-center hover:scale-105 transition-transform ${
-              isCapturing ? 'bg-white text-background-dark' : 'bg-white/5 border border-white/10 text-white hover:bg-white/10'
+              isCapturing ? 'bg-white text-[#0A0A0A]' : 'bg-white/5 border border-white/10 text-white hover:bg-white/10'
             }`}
           >
             <span className="material-symbols-outlined font-bold">{isCapturing ? 'mic' : 'mic_off'}</span>
           </button>
+          {/* Pause */}
           <button className="size-14 bg-white/5 border border-white/10 text-white rounded-full flex items-center justify-center hover:bg-white/10 transition-colors">
             <span className="material-symbols-outlined">pause</span>
           </button>
-          <button className="size-14 bg-white/5 border border-white/10 text-white rounded-full flex items-center justify-center hover:bg-white/10 transition-colors">
+          {/* Edit/type — toggles text input */}
+          <button
+            onClick={() => setShowTextInput(v => !v)}
+            className={`size-14 rounded-full flex items-center justify-center transition-all ${
+              showTextInput
+                ? 'bg-[#818CF8] text-white shadow-lg shadow-[#818CF8]/30'
+                : 'bg-white/5 border border-white/10 text-white hover:bg-white/10'
+            }`}
+            title="Type your response"
+          >
             <span className="material-symbols-outlined">edit</span>
           </button>
         </div>
+        {/* Toggle Conversation */}
+        <button
+          onClick={() => setShowTranscript(v => !v)}
+          className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 text-sm text-slate-400 hover:text-white hover:bg-white/10 transition-all"
+        >
+          <span className="material-symbols-outlined text-[16px]">{showTranscript ? 'visibility_off' : 'forum'}</span>
+          {showTranscript ? 'Hide Conversation' : 'Show Conversation'}
+        </button>
+
+        {/* Text input panel */}
+        <AnimatePresence>
+          {showTextInput && (
+            <motion.div
+              initial={{ opacity: 0, y: 12, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 12, scale: 0.97 }}
+              transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
+              className="w-full max-w-2xl"
+            >
+              <div className="flex items-center gap-3 bg-white/[0.06] backdrop-blur-xl border border-white/10 rounded-2xl px-4 py-3">
+                <span className="material-symbols-outlined text-slate-500 text-[20px] shrink-0">edit</span>
+                <input
+                  ref={textInputRef}
+                  value={textInput}
+                  onChange={e => setTextInput(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSendText()}
+                  placeholder="Type your response..."
+                  className="flex-1 bg-transparent text-white text-sm placeholder:text-slate-500 outline-none"
+                />
+                <button
+                  onClick={handleSendText}
+                  disabled={!textInput.trim()}
+                  className="shrink-0 w-9 h-9 rounded-xl bg-[#818CF8] flex items-center justify-center hover:bg-[#818CF8]/80 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  <span className="material-symbols-outlined text-white text-[18px]">send</span>
+                </button>
+              </div>
+              <p className="text-center text-[11px] text-slate-600 mt-2">Type instead of speaking · Press Enter to send</p>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </footer>
 
       {/* End Session Confirm Modal */}

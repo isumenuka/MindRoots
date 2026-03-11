@@ -46,18 +46,6 @@ export default function AppSidebar({ user, activeTab, onTabChange, onSignOut, si
           Home
         </Link>
 
-        {/* Session History */}
-        <Link
-          href="/history"
-          className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-sm font-medium ${
-            isHistory
-              ? 'bg-[#818CF8]/15 text-[#818CF8]'
-              : 'text-slate-400 hover:bg-white/5 hover:text-slate-100'
-          }`}
-        >
-          <span className="material-symbols-outlined text-[20px]">history</span>
-          Session History
-        </Link>
 
         {/* Archives */}
         <Link
