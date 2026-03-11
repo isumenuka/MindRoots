@@ -6,6 +6,7 @@ const nextConfig = {
       { protocol: 'https', hostname: 'lh3.googleusercontent.com' },
     ],
   },
+  serverExternalPackages: ['@react-pdf/renderer'],
   experimental: {
     serverActions: {
       allowedOrigins: ['localhost:3000'],
@@ -18,12 +19,7 @@ const nextConfig = {
     }
     return config
   },
-  experimental: {
-    serverComponentsExternalPackages: ['@react-pdf/renderer'],
-    serverActions: {
-      allowedOrigins: ['localhost:3000'],
-    },
-  },
+  turbopack: {},
 }
 
 module.exports = nextConfig

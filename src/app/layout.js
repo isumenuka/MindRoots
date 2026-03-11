@@ -9,7 +9,7 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <link
           rel="stylesheet"
@@ -20,7 +20,7 @@ export default function RootLayout({ children }) {
           href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block"
         />
       </head>
-      <body className="bg-[#0A0A0A] text-slate-300 min-h-screen">
+      <body className="bg-[#0A0A0A] text-slate-300 min-h-screen" suppressHydrationWarning>
         <PageTransition>
           {children}
         </PageTransition>
