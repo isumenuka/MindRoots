@@ -7,7 +7,7 @@
 
 import { GoogleGenAI, Modality } from '@google/genai'
 
-const LIVE_MODEL = 'models/gemini-2.0-flash-live-001'
+const LIVE_MODEL = 'gemini-2.5-flash-native-audio-preview-12-2025'
 
 const SOCRATIC_SYSTEM_PROMPT = `You are the Socratic Interviewer — a deeply empathetic AI archaeologist who excavates the hidden origins of human beliefs.
 
@@ -54,7 +54,9 @@ class GeminiLiveService {
   }
 
   init(apiKey) {
-    this.ai = new GoogleGenAI({ apiKey })
+    this.ai = new GoogleGenAI({ 
+      apiKey
+    })
     this._initialized = true
   }
 
@@ -65,7 +67,7 @@ class GeminiLiveService {
       this.session = await this.ai.live.connect({
         model: LIVE_MODEL,
         config: {
-          responseModalities: [Modality.AUDIO],
+          responseModalities: ["AUDIO"],
           speechConfig: {
             voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } }
           },
@@ -123,12 +125,16 @@ class GeminiLiveService {
           }
           this.onAudioChunk?.(bytes)
         }
-        if (part.text) {
-          this.fullTranscript.push({ role: 'assistant', text: part.text })
-          this.onTranscript?.({ role: 'assistant', text: part.text })
-          this._parseBeliefNodes(part.text)
-          this._checkCompletionTrigger(part.text)
-        }
+      }
+    }
+
+    if (sc?.outputTranscription) {
+      const text = sc.outputTranscription.text
+      if (text) {
+        this.fullTranscript.push({ role: 'assistant', text })
+        this.onTranscript?.({ role: 'assistant', text })
+        this._parseBeliefNodes(text)
+        this._checkCompletionTrigger(text)
       }
     }
 
@@ -186,9 +192,8 @@ class GeminiLiveService {
   async sendText(text) {
     if (!this.session || !this.isConnected) return
     try {
-      await this.session.sendClientContent({
-        turns: [{ role: 'user', parts: [{ text }] }],
-        turnComplete: true,
+      await this.session.sendRealtimeInput({
+        text: text
       })
       this.fullTranscript.push({ role: 'user', text })
       this.onTranscript?.({ role: 'user', text })

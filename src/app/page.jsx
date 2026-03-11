@@ -11,26 +11,32 @@ export default function LandingPage() {
   const [error, setError] = useState(null)
 
   useEffect(() => {
+    // Just sync auth state, no forced redirects
     const unsub = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        setUser(user)
-        try {
-          const userDoc = await getUserDoc(user.uid)
-          // Ensure they go to full-screen onboarding if not complete
-          if (userDoc && !userDoc.onboarding_complete) {
-            router.push('/onboarding')
-          } else {
-            router.push('/interview')
-          }
-        } catch {
-          router.push('/interview')
-        }
-      }
+      setUser(user)
     })
     return () => unsub()
-  }, [setUser, router])
+  }, [setUser])
 
   const handleSignIn = async () => {
+    // If they click "Get Started" and are already signed in, check onboarding and route them
+    const currentUser = auth.currentUser;
+    if (currentUser) {
+      setSigningIn(true)
+      try {
+        const userDoc = await getUserDoc(currentUser.uid)
+        if (userDoc && !userDoc.onboarding_complete) {
+          router.push('/onboarding')
+        } else {
+          router.push('/interview')
+        }
+      } catch {
+        router.push('/interview')
+      }
+      return;
+    }
+
+    // Otherwise initiate Google sign in
     setSigningIn(true)
     setError(null)
     try {

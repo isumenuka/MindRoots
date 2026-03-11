@@ -1,36 +1,25 @@
 /**
  * GeminiNano2Service.js
  * Image generation via Gemini API.
- * For local run, uses gemini-2.0-flash's image generation capability.
+ * For local run, uses gemini-3.1-flash-image-preview image generation capability.
  * For production, swap with Vertex AI Imagen.
  */
+import { GoogleGenAI } from '@google/genai'
 
 async function generateBeliefIllustration(illustrationPrompt, apiKey) {
-  // Use Gemini image generation endpoint
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent?key=${apiKey}`
-
   const fullPrompt = `${illustrationPrompt}. Style: painterly, moody, memory-like, cinematic lighting, deep shadows, evocative atmosphere. No people, no faces.`
 
   try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: fullPrompt }] }],
-        generationConfig: { responseModalities: ['IMAGE', 'TEXT'] },
-      }),
+    const ai = new GoogleGenAI({ apiKey })
+    const interaction = await ai.interactions.create({
+      model: 'gemini-3.1-flash-image-preview',
+      input: fullPrompt
     })
 
-    if (!response.ok) {
-      console.warn('[GeminiNano2] Image gen failed:', response.status)
-      return null
-    }
-
-    const data = await response.json()
-    const parts = data.candidates?.[0]?.content?.parts || []
-    for (const part of parts) {
-      if (part.inlineData?.mimeType?.startsWith('image/')) {
-        return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`
+    for (const output of interaction.outputs) {
+      if (output.type === 'image' && output.data) {
+        const mimeType = output.mimeType || 'image/jpeg'
+        return `data:${mimeType};base64,${output.data}`
       }
     }
     return null

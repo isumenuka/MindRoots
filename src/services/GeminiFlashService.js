@@ -1,9 +1,10 @@
 /**
  * GeminiFlashService.js
- * Uses Gemini 2.0 Flash for belief structuring (Agent 2).
+ * Uses Gemini 3.0 Flash for belief structuring (Agent 2).
  */
+import { GoogleGenAI } from '@google/genai'
 
-const FLASH_MODEL = 'gemini-2.0-flash'
+const FLASH_MODEL = 'gemini-3-flash-preview'
 
 const STRUCTURER_SYSTEM_PROMPT = `You are the Data Structurer. You receive raw belief node data extracted from a voice interview and produce a complete, validated Belief Origin Tree JSON graph.
 
@@ -39,28 +40,26 @@ Respond ONLY with valid JSON in this exact format — no markdown code fences, n
 async function structureBeliefs(rawBeliefNodes, apiKey) {
   const prompt = `Here are the raw belief nodes extracted from a voice interview session:\n\n${JSON.stringify(rawBeliefNodes, null, 2)}\n\nPlease structure these into a complete Belief Origin Tree JSON.`
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${FLASH_MODEL}:generateContent?key=${apiKey}`
+  const ai = new GoogleGenAI({ apiKey })
 
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      system_instruction: { parts: [{ text: STRUCTURER_SYSTEM_PROMPT }] },
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      generationConfig: {
+  let text = ''
+  try {
+    const interaction = await ai.interactions.create({
+      model: FLASH_MODEL,
+      config: {
+        systemInstruction: { parts: [{ text: STRUCTURER_SYSTEM_PROMPT }] },
         temperature: 0.7,
         maxOutputTokens: 4096,
-      }
+      },
+      input: prompt
     })
-  })
-
-  if (!response.ok) {
-    const err = await response.text()
-    throw new Error(`Gemini Flash error: ${response.status} — ${err}`)
+    
+    // Find text output
+    const output = interaction.outputs.length > 0 ? interaction.outputs[interaction.outputs.length - 1] : null
+    text = output?.text || ''
+  } catch (e) {
+    throw new Error(`Gemini Flash error: ${e.message}`)
   }
-
-  const data = await response.json()
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text || ''
 
   // Strip markdown code fences if present
   const cleaned = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
