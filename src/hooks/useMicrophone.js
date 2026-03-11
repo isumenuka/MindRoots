@@ -16,11 +16,23 @@ export default function useMicrophone() {
   const processorRef = useRef(null)
   const analyserRef = useRef(null)
   const onChunkRef = useRef(null)
-  const onStreamEndRef = useRef(null)
+    const onStreamEndRef = useRef(null)
+
+  // VAD State Refs
+  const vadStateRef = useRef({
+    isSpeaking: false,
+    silenceStart: 0,
+    SILENCE_THRESHOLD: 0.015, // Volume below this is considered silence
+    SILENCE_DURATION: 1200 // Wait 1.2s of silence before triggering end
+  })
 
   const start = useCallback(async (onChunk, onStreamEnd) => {
     onChunkRef.current = onChunk
     onStreamEndRef.current = onStreamEnd ?? null
+    // Reset VAD state
+    vadStateRef.current.isSpeaking = false
+    vadStateRef.current.silenceStart = 0
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
@@ -45,12 +57,39 @@ export default function useMicrophone() {
       analyserRef.current = analyser
       source.connect(analyser)
 
-      // Use 1024 buffer (64ms @ 16kHz) — 4× lower latency than the old 4096
+      // Use 1024 buffer (64ms @ 16kHz)
       const processor = ctx.createScriptProcessor(1024, 1, 1)
       processorRef.current = processor
 
       processor.onaudioprocess = (e) => {
         const float32 = e.inputBuffer.getChannelData(0)
+        
+        // 1. Calculate RMS (Volume)
+        let sumSquares = 0
+        for (let i = 0; i < float32.length; i++) {
+          sumSquares += float32[i] * float32[i]
+        }
+        const rms = Math.sqrt(sumSquares / float32.length)
+
+        // 2. VAD Logic
+        if (rms > vadStateRef.current.SILENCE_THRESHOLD) {
+          // User is speaking
+          vadStateRef.current.isSpeaking = true
+          vadStateRef.current.silenceStart = 0
+        } else if (vadStateRef.current.isSpeaking) {
+          // User was speaking, but now it's quiet
+          if (vadStateRef.current.silenceStart === 0) {
+            vadStateRef.current.silenceStart = Date.now()
+          } else if (Date.now() - vadStateRef.current.silenceStart > vadStateRef.current.SILENCE_DURATION) {
+            // Silence persisted longer than duration! Trigger end.
+            console.log('[useMicrophone] VAD triggered silence end')
+            vadStateRef.current.isSpeaking = false
+            vadStateRef.current.silenceStart = 0
+            onStreamEndRef.current?.()
+          }
+        }
+
+        // 3. Send audio chunk
         const pcm16 = float32ToPCM16(float32)
         onChunkRef.current?.(pcm16)
       }

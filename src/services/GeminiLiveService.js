@@ -71,13 +71,18 @@ class GeminiLiveService {
       this.session = await this.ai.live.connect({
         model: LIVE_MODEL,
         config: {
-          responseModalities: ['AUDIO'],
-          speechConfig: {
-            voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } }
-          },
           systemInstruction: {
             parts: [{ text: SOCRATIC_SYSTEM_PROMPT }]
           },
+          generationConfig: {
+            responseModalities: ['AUDIO'],
+            speechConfig: {
+              voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } }
+            }
+          },
+          // Enable transcriptions in the setup config (for v1alpha)
+          inputAudioTranscription: { model: 'models/gemini-2.5-flash' },
+          outputAudioTranscription: { model: 'models/gemini-2.5-flash' },
           // Enable v1alpha features for significantly better voice interaction
           enableAffectiveDialog: true,
           proactivity: { proactiveAudio: true }
@@ -219,10 +224,16 @@ class GeminiLiveService {
       if (typeof Buffer !== 'undefined') {
         base64 = Buffer.from(pcm16Bytes).toString('base64')
       } else {
-        let binary = ''
         const bytes = new Uint8Array(pcm16Bytes)
-        for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i])
-        base64 = btoa(binary)
+        // Optimize base64 encoding to prevent main thread blocking and lag
+        // Use apply with chunks to prevent 'Maximum call stack size exceeded'
+        const chunkSize = 8192
+        let binaryStr = ''
+        for (let i = 0; i < bytes.length; i += chunkSize) {
+          const chunk = bytes.subarray(i, i + chunkSize)
+          binaryStr += String.fromCharCode.apply(null, chunk)
+        }
+        base64 = btoa(binaryStr)
       }
       await this.session.sendRealtimeInput({
         audio: { data: base64, mimeType: 'audio/pcm;rate=16000' }
