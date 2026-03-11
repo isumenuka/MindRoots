@@ -132,6 +132,20 @@ async def gemini_live_proxy(ws: WebSocket):
         output_audio_transcription=types.AudioTranscriptionConfig(),
         enable_affective_dialog=True,
         proactivity=types.ProactivityConfig(proactive_audio=True),
+        # ── VAD / noise settings ─────────────────────────────────────────
+        realtime_input_config=types.RealtimeInputConfig(
+            automatic_activity_detection=types.AutomaticActivityDetection(
+                # Require clearer/louder audio before speech detection starts
+                # LOW = less easily triggered → ignores background noise
+                start_of_speech_sensitivity=types.StartSensitivity.START_SENSITIVITY_LOW,
+                # Don't end speech turn on brief pauses / noise gaps
+                end_of_speech_sensitivity=types.EndSensitivity.END_SENSITIVITY_LOW,
+                # Wait 2 seconds of real silence before ending a turn
+                silence_duration_ms=2000,
+                # Include 300ms of audio before detected speech (captures full words)
+                prefix_padding_ms=300,
+            )
+        ),
     )
 
     try:
@@ -213,11 +227,22 @@ async def gemini_live_proxy(ws: WebSocket):
                             text="Hello. I am ready to begin. Please greet me warmly and ask me to share a belief."
                         )
 
-            # Run both directions concurrently — stop when browser disconnects
-            await asyncio.gather(
-                receive_from_gemini(),
-                receive_from_browser(),
+            # ── Run both relay loops as independent tasks ─────────────────
+            # create_task = truly concurrent (not co-routine chained like gather)
+            gemini_task  = asyncio.create_task(receive_from_gemini())
+            browser_task = asyncio.create_task(receive_from_browser())
+
+            # Wait for whichever ends first, then cancel the other
+            done, pending = await asyncio.wait(
+                [gemini_task, browser_task],
+                return_when=asyncio.FIRST_COMPLETED,
             )
+            for task in pending:
+                task.cancel()
+                try:
+                    await task
+                except asyncio.CancelledError:
+                    pass
 
     except WebSocketDisconnect:
         print("[Proxy] Browser disconnected")

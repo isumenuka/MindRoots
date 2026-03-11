@@ -129,15 +129,20 @@ class GeminiLiveService {
     this._send({ type: 'trigger_start' })
   }
 
-  // Send PCM16 audio chunk from mic (16kHz, mono)
-  async sendAudio(pcm16Bytes) {
+  // Send PCM16 audio chunk from mic
+  // Accepts ArrayBuffer (from AudioWorklet zero-copy) or ArrayBufferView
+  async sendAudio(pcm16Input) {
     if (!this.isConnected) return
-    const bytes = new Uint8Array(pcm16Bytes)
+    // Handle both ArrayBuffer and TypedArray inputs
+    const bytes = pcm16Input instanceof ArrayBuffer
+      ? new Uint8Array(pcm16Input)
+      : new Uint8Array(pcm16Input.buffer ?? pcm16Input)
+
+    // Fast chunked base64 — avoids max call stack on large buffers
     const chunkSize = 8192
     let binaryStr = ''
     for (let i = 0; i < bytes.length; i += chunkSize) {
-      const chunk = bytes.subarray(i, i + chunkSize)
-      binaryStr += String.fromCharCode.apply(null, chunk)
+      binaryStr += String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize))
     }
     this._send({ type: 'audio', data: btoa(binaryStr) })
   }
