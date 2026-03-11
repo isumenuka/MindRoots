@@ -59,7 +59,7 @@ export default function InterviewPage() {
       setIsInterviewing(true)
 
       // Pre-warm the audio worklet so it doesn't drop the first chunk
-      await initAudioWorklet()
+      await audioPlayer.init()
 
       // Initialize Gemini Live
       const svc = new GeminiLiveService()

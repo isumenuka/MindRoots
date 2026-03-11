@@ -9,9 +9,7 @@ const ADMIN_UIDS = (process.env.NEXT_PUBLIC_ADMIN_UIDS || '').split(',').map(s =
 
 const VOICES = ['Aoede', 'Charon', 'Fenrir', 'Kore', 'Puck', 'Orbit', 'Zephyr', 'Leda']
 const MODELS = [
-  'gemini-2.5-flash-native-audio-preview-12-2025',
-  'gemini-2.5-flash-preview-native-audio-dialog',
-  'gemini-2.0-flash-live-001',
+  'gemini-2.0-flash-exp',
 ]
 
 const Section = ({ title, icon, children, defaultOpen = true }) => {

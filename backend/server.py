@@ -3,23 +3,6 @@
 MindRoots — Gemini Live WebSocket Proxy
 All Gemini Live API communication happens in Python.
 The browser just sends/receives audio & messages over a simple WebSocket.
-
-Protocol (JSON):
-  Browser → Server:
-    { "type": "audio", "data": "<base64 pcm16 @ 16kHz>" }
-    { "type": "text",  "text": "..." }
-    { "type": "audio_end" }
-    { "type": "trigger_start" }
-
-  Server → Browser:
-    { "type": "ready" }
-    { "type": "audio",       "data": "<base64 pcm16 @ 24kHz>" }
-    { "type": "transcript",  "role": "user"|"assistant", "text": "..." }
-    { "type": "interrupted" }
-    { "type": "turn_complete" }
-    { "type": "belief_node", "node": { ... } }
-    { "type": "complete" }
-    { "type": "error",       "message": "..." }
 """
 
 import asyncio
@@ -28,13 +11,13 @@ import json
 import os
 import re
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Header
-from pydantic import BaseModel
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Header  # type: ignore
+from pydantic import BaseModel  # type: ignore
 from typing import Optional
-from fastapi.middleware.cors import CORSMiddleware
-from google import genai
-from google.genai import types
-from dotenv import load_dotenv
+from fastapi.middleware.cors import CORSMiddleware  # type: ignore
+from google import genai  # type: ignore
+from google.genai import types  # type: ignore
+from dotenv import load_dotenv  # type: ignore
 
 # ─── Config ────────────────────────────────────────────────────────────────
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), ".env"))
@@ -45,7 +28,8 @@ if not GEMINI_API_KEY:
 
 ADMIN_SECRET = os.environ.get("ADMIN_SECRET", "mindroots-admin-2025")
 
-LIVE_MODEL = "gemini-2.5-flash-native-audio-preview-12-2025"
+# Use a stable known model for Live API bidi generation
+LIVE_MODEL = "gemini-2.0-flash-exp"
 COMPLETION_PHRASE = "your belief map is now being drawn"
 
 # ─── Live config (mutable — updated by admin dashboard, no restart needed) ──
@@ -226,39 +210,39 @@ async def gemini_live_proxy(ws: WebSocket):
                     print(f"[Gemini] Response: {type(response).__name__}")
 
                     # ── Path 1: server_content (most common) ──────────────
-                    sc = response.server_content
+                    sc = getattr(response, "server_content", None)
                     if sc is not None:
                         # Interruption
-                        if sc.interrupted:
+                        if getattr(sc, "interrupted", False):
                             print("[Gemini] Interrupted")
                             await send_json(ws, {"type": "interrupted"})
 
                         # Turn complete
-                        if sc.turn_complete:
+                        if getattr(sc, "turn_complete", False):
                             print("[Gemini] Turn complete")
                             await send_json(ws, {"type": "turn_complete"})
 
                         # Audio from model_turn parts
-                        if sc.model_turn and sc.model_turn.parts:
-                            for part in sc.model_turn.parts:
-                                print(f"[Gemini] Part type: {type(part).__name__}, has inline_data: {part.inline_data is not None}")
-                                if part.inline_data:
-                                    mime = part.inline_data.mime_type or ""
-                                    data = part.inline_data.data
+                        if getattr(sc, "model_turn", None) and getattr(sc.model_turn, "parts", None):  # type: ignore
+                            for part in sc.model_turn.parts:  # type: ignore
+                                print(f"[Gemini] Part type: {type(part).__name__}, has inline_data: {getattr(part, 'inline_data', None) is not None}")
+                                if getattr(part, "inline_data", None):
+                                    mime = part.inline_data.mime_type or ""  # type: ignore
+                                    data = part.inline_data.data  # type: ignore
                                     print(f"[Gemini] Audio mime={mime} bytes={len(data) if data else 0}")
                                     if data and (mime.startswith("audio/") or not mime):
                                         audio_b64 = base64.b64encode(data).decode()
                                         await send_json(ws, {"type": "audio", "data": audio_b64})
 
                         # Input (user) transcript
-                        if sc.input_transcription and sc.input_transcription.text:
-                            text = sc.input_transcription.text
+                        if getattr(sc, "input_transcription", None) and getattr(sc.input_transcription, "text", None):  # type: ignore
+                            text = sc.input_transcription.text  # type: ignore
                             print(f"[Gemini] User transcript: {text[:80]}")
                             await send_json(ws, {"type": "transcript", "role": "user", "text": text})
 
                         # Output (assistant) transcript
-                        if sc.output_transcription and sc.output_transcription.text:
-                            text = sc.output_transcription.text
+                        if getattr(sc, "output_transcription", None) and getattr(sc.output_transcription, "text", None):  # type: ignore
+                            text = sc.output_transcription.text  # type: ignore
                             print(f"[Gemini] AI transcript: {text[:80]}")
                             await send_json(ws, {"type": "transcript", "role": "assistant", "text": text})
 
@@ -274,8 +258,8 @@ async def gemini_live_proxy(ws: WebSocket):
                                 await send_json(ws, {"type": "complete"})
 
                     # ── Path 2: top-level data (some SDK versions use this) ──
-                    elif hasattr(response, "data") and response.data:
-                        data = response.data
+                    elif hasattr(response, "data") and response.data:  # type: ignore
+                        data = response.data  # type: ignore
                         print(f"[Gemini] Top-level audio bytes={len(data)}")
                         audio_b64 = base64.b64encode(data).decode()
                         await send_json(ws, {"type": "audio", "data": audio_b64})
@@ -344,7 +328,7 @@ async def health():
 
 
 if __name__ == "__main__":
-    import uvicorn
+    import uvicorn  # type: ignore
     print("""
 ╔══════════════════════════════════════════════════════╗
 ║     MindRoots — Gemini Live Python Proxy             ║
