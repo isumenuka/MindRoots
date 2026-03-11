@@ -55,17 +55,17 @@ export default function SettingsPage() {
       </div>
 
       {/* Header */}
-      <header className="relative z-10 flex items-center justify-between border-b border-white/5 px-6 py-5 lg:px-16">
-        <button onClick={() => router.back()} className="flex items-center gap-3 group">
-          <span className="material-symbols-outlined text-slate-500 group-hover:text-white transition-colors">arrow_back</span>
+      <header className="relative z-10 flex items-center justify-between border-b border-white/5 px-4 py-4 sm:px-6 sm:py-5 lg:px-16">
+        <button onClick={() => router.back()} className="flex items-center gap-2 sm:gap-3 group">
+          <span className="material-symbols-outlined text-slate-500 group-hover:text-white transition-colors text-[20px] sm:text-[24px]">arrow_back</span>
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 bg-[#818CF8] rounded-lg flex items-center justify-center">
-              <span className="material-symbols-outlined text-white text-base">psychology</span>
+            <div className="w-7 h-7 sm:w-8 sm:h-8 bg-[#818CF8] rounded-lg flex items-center justify-center">
+              <span className="material-symbols-outlined text-white text-[16px] sm:text-[18px]">psychology</span>
             </div>
-            <h1 className="font-display text-lg font-bold text-white">MindRoots</h1>
+            <h1 className="font-display text-base sm:text-lg font-bold text-white">MindRoots</h1>
           </div>
         </button>
-        <h2 className="font-display text-lg font-semibold text-slate-400">Settings</h2>
+        <h2 className="font-display text-base sm:text-lg font-semibold text-slate-400">Settings</h2>
       </header>
 
       <main className="relative z-10 max-w-2xl mx-auto px-6 py-12">
@@ -86,15 +86,15 @@ export default function SettingsPage() {
                 <p className="text-sm text-slate-500">{user?.email}</p>
               </div>
             </div>
-            <div className="p-6 flex items-center justify-between">
+            <div className="p-4 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-0">
               <div>
                 <p className="text-sm font-medium text-slate-300">Member since</p>
                 <p className="text-xs text-slate-600">
                   {userDoc?.created_at?.toDate?.()?.toLocaleDateString() || '—'}
                 </p>
               </div>
-              <div className="w-px h-8 bg-white/5" />
-              <div className="text-right">
+              <div className="hidden sm:block w-px h-8 bg-white/5" />
+              <div className="sm:text-right">
                 <p className="text-sm font-medium text-slate-300">Data storage</p>
                 <p className="text-xs text-slate-600">Firebase / GCS — your account only</p>
               </div>

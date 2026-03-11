@@ -110,27 +110,27 @@ export default function SessionPage({ params }) {
       </div>
 
       {/* Header */}
-      <header className="relative z-10 flex items-center justify-between whitespace-nowrap border-b border-white/10 px-6 py-4 lg:px-16">
-        <div className="flex items-center gap-3">
-          <div className="size-6 text-[#818CF8]">
-            <svg fill="currentColor" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-              <path clipRule="evenodd" d="M12.0799 24L4 19.2479L9.95537 8.75216L18.04 13.4961L18.0446 4H29.9554L29.96 13.4961L38.0446 8.75216L44 19.2479L35.92 24L44 28.7521L38.0446 39.2479L29.96 34.5039L29.9554 44H18.0446L18.04 34.5039L9.95537 39.2479L4 28.7521L12.0799 24Z" fillRule="evenodd" />
-            </svg>
-          </div>
-          <h2 className="text-slate-100 text-xl font-display font-bold tracking-tight">MindRoots</h2>
+      <header className="relative z-10 flex items-center justify-between border-b border-white/5 px-4 py-4 sm:px-6 sm:py-5 lg:px-16">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <button onClick={() => router.push('/')} className="flex items-center gap-2 sm:gap-3 group">
+            <div className="w-8 h-8 sm:w-8 sm:h-8 bg-[#818CF8] rounded-lg flex items-center justify-center">
+              <span className="material-symbols-outlined text-white text-[18px] sm:text-lg">psychology</span>
+            </div>
+            <h1 className="font-display text-lg sm:text-xl font-bold text-white group-hover:text-[#818CF8] transition-colors hidden sm:block">MindRoots</h1>
+          </button>
         </div>
-        <div className="flex gap-3">
+        <div className="flex gap-2 sm:gap-3">
           <button
             onClick={() => router.push('/history')}
-            className="flex items-center justify-center rounded-xl h-9 w-9 bg-white/5 text-slate-400 hover:text-white hover:bg-white/10 transition-colors border border-white/10"
+            className="flex items-center justify-center rounded-xl h-8 w-8 sm:h-9 sm:w-9 bg-white/5 text-slate-400 hover:text-white hover:bg-white/10 transition-colors border border-white/10"
           >
-            <span className="material-symbols-outlined text-[18px]">history</span>
+            <span className="material-symbols-outlined text-[16px] sm:text-[18px]">history</span>
           </button>
           <button
             onClick={() => router.push('/settings')}
-            className="flex items-center justify-center rounded-xl h-9 w-9 bg-white/5 text-slate-400 hover:text-white hover:bg-white/10 transition-colors border border-white/10"
+            className="flex items-center justify-center rounded-xl h-8 w-8 sm:h-9 sm:w-9 bg-white/5 text-slate-400 hover:text-white hover:bg-white/10 transition-colors border border-white/10"
           >
-            <span className="material-symbols-outlined text-[18px]">settings</span>
+            <span className="material-symbols-outlined text-[16px] sm:text-[18px]">settings</span>
           </button>
         </div>
       </header>

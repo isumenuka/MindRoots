@@ -165,31 +165,32 @@ export default function InterviewPage() {
       </div>
 
       {/* Header */}
-      <header className="relative z-10 flex items-center justify-between px-6 py-6 lg:px-12 border-b border-white/5">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center justify-center size-10 rounded-xl bg-white/5 border border-white/10">
-            <span className="material-symbols-outlined text-[#818CF8]">psychology</span>
+      <header className="relative z-10 flex items-center justify-between px-4 py-4 sm:px-6 sm:py-6 lg:px-12 border-b border-white/5">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center justify-center size-8 sm:size-10 rounded-xl bg-white/5 border border-white/10">
+            <span className="material-symbols-outlined text-[#818CF8] text-[20px] sm:text-[24px]">psychology</span>
           </div>
           <div>
-            <h1 className="font-display text-xl font-bold tracking-tight text-white">MindRoots</h1>
+            <h1 className="font-display text-lg sm:text-xl font-bold tracking-tight text-white hidden sm:block">MindRoots</h1>
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4">
           {/* Belief counter */}
-          <div className="flex items-center gap-2 px-4 py-2 bg-white/5 rounded-full border border-white/10">
-            <span className="text-sm font-medium text-slate-300">
-              🔥 {beliefs.length} of {MAX_BELIEFS} beliefs excavated
+          <div className="flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 sm:px-4 sm:py-2 bg-white/5 rounded-full border border-white/10">
+            <span className="text-xs sm:text-sm font-medium text-slate-300">
+              🔥 <span className="hidden sm:inline">{beliefs.length} of {MAX_BELIEFS} beliefs excavated</span>
+              <span className="inline sm:hidden">{beliefs.length}/{MAX_BELIEFS}</span>
             </span>
           </div>
 
           {/* End Session */}
           <button
             onClick={() => setShowEndConfirm(true)}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-white/10 hover:bg-white/5 transition-all text-sm font-semibold text-white/60 hover:text-white"
+            className="flex items-center gap-1 sm:gap-2 px-3 py-1.5 sm:px-5 sm:py-2.5 rounded-xl border border-white/10 hover:bg-white/5 transition-all text-xs sm:text-sm font-semibold text-white/60 hover:text-white"
           >
-            <span className="material-symbols-outlined text-[20px]">call_end</span>
-            End Session
+            <span className="material-symbols-outlined text-[18px] sm:text-[20px]">call_end</span>
+            <span className="hidden sm:inline">End Session</span>
           </button>
         </div>
       </header>
@@ -249,7 +250,7 @@ export default function InterviewPage() {
         {showTranscript && (
           <div
             ref={(el) => { transcriptScrollRef.current = el }}
-            className="frosted-glass rounded-xl p-6 max-h-[280px] overflow-y-auto flex flex-col gap-6"
+            className="frosted-glass rounded-xl p-4 sm:p-6 max-h-[200px] sm:max-h-[280px] overflow-y-auto flex flex-col gap-4 sm:gap-6"
           >
             {transcript.length === 0 ? (
               <p className="text-slate-500 text-sm italic">Conversation will appear here...</p>

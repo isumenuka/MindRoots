@@ -70,20 +70,20 @@ export default function SharePage({ params }) {
       </div>
 
       {/* Shared badge header */}
-      <header className="relative z-10 flex items-center justify-between border-b border-white/5 px-6 py-4 lg:px-16">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-[#818CF8] rounded-lg flex items-center justify-center">
-            <span className="material-symbols-outlined text-white text-lg">psychology</span>
+      <header className="relative z-10 flex items-center justify-between border-b border-white/5 px-4 py-4 sm:px-6 lg:px-16">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-[#818CF8] rounded-lg flex items-center justify-center">
+            <span className="material-symbols-outlined text-white text-[18px] sm:text-lg">psychology</span>
           </div>
-          <h1 className="font-display text-xl font-bold text-white">MindRoots</h1>
+          <h1 className="font-display text-lg sm:text-xl font-bold text-white hidden sm:block">MindRoots</h1>
         </div>
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10">
+        <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10">
           <span className="material-symbols-outlined text-slate-400 text-[14px]">visibility</span>
-          <span className="text-xs text-slate-500 font-medium">Read-only shared view</span>
+          <span className="text-xs text-slate-500 font-medium">Read-only view</span>
         </div>
         <button
           onClick={() => router.push('/')}
-          className="px-4 py-2 text-sm font-semibold bg-white text-black rounded-xl hover:bg-slate-100 transition-all"
+          className="px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-semibold bg-white text-black rounded-xl hover:bg-slate-100 transition-all"
         >
           Create my own
         </button>

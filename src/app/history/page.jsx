@@ -29,22 +29,23 @@ export default function HistoryPage() {
       </div>
 
       {/* Header */}
-      <header className="relative z-10 flex items-center justify-between border-b border-white/5 px-6 py-5 lg:px-16">
-        <div className="flex items-center gap-3">
-          <button onClick={() => router.push('/')} className="flex items-center gap-3 group">
+      <header className="relative z-10 flex items-center justify-between border-b border-white/5 px-4 py-4 sm:px-6 sm:py-5 lg:px-16">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <button onClick={() => router.push('/')} className="flex items-center gap-2 sm:gap-3 group">
             <div className="w-8 h-8 bg-[#818CF8] rounded-lg flex items-center justify-center">
-              <span className="material-symbols-outlined text-white text-lg">psychology</span>
+              <span className="material-symbols-outlined text-white text-[18px] sm:text-lg">psychology</span>
             </div>
-            <h1 className="font-display text-xl font-bold text-white group-hover:text-[#818CF8] transition-colors">MindRoots</h1>
+            <h1 className="font-display text-lg sm:text-xl font-bold text-white group-hover:text-[#818CF8] transition-colors hidden sm:block">MindRoots</h1>
           </button>
         </div>
-        <div className="flex items-center gap-3">
-          <button onClick={() => router.push('/interview')} className="flex items-center gap-2 px-4 py-2 bg-white text-black rounded-xl text-sm font-semibold hover:bg-slate-100 transition-all">
-            <span className="material-symbols-outlined text-lg">add</span>
-            New Excavation
+        <div className="flex items-center gap-2 sm:gap-3">
+          <button onClick={() => router.push('/interview')} className="flex items-center gap-1 sm:gap-2 px-3 py-1.5 sm:px-4 sm:py-2 bg-white text-black rounded-xl text-xs sm:text-sm font-semibold hover:bg-slate-100 transition-all">
+            <span className="material-symbols-outlined text-[16px] sm:text-lg">add</span>
+            <span className="hidden sm:inline">New Excavation</span>
+            <span className="inline sm:hidden">New</span>
           </button>
-          <button onClick={() => router.push('/settings')} className="flex items-center justify-center w-9 h-9 rounded-xl bg-white/5 border border-white/10 text-slate-400 hover:text-white hover:bg-white/10 transition-colors">
-            <span className="material-symbols-outlined text-[18px]">settings</span>
+          <button onClick={() => router.push('/settings')} className="flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-white/5 border border-white/10 text-slate-400 hover:text-white hover:bg-white/10 transition-colors">
+            <span className="material-symbols-outlined text-[16px] sm:text-[18px]">settings</span>
           </button>
         </div>
       </header>

@@ -66,25 +66,25 @@ export default function LandingPage() {
 
       {/* Nav */}
       <nav className="fixed top-0 w-full z-50 border-b border-white/5 bg-[#0A0A0A]/80 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto px-6 h-18 py-5 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 bg-[#818CF8] rounded-xl flex items-center justify-center shadow-[0_0_20px_rgba(129,140,248,0.4)]">
-              <span className="material-symbols-outlined text-white text-lg">psychology</span>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 sm:h-20 py-4 sm:py-5 flex items-center justify-between">
+          <div className="flex items-center gap-2 sm:gap-2.5">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-[#818CF8] rounded-xl flex items-center justify-center shadow-[0_0_20px_rgba(129,140,248,0.4)]">
+              <span className="material-symbols-outlined text-white text-lg sm:text-xl">psychology</span>
             </div>
-            <span className="text-xl font-display font-bold tracking-tight text-white">MindRoots</span>
+            <span className="text-lg sm:text-xl font-display font-bold tracking-tight text-white">MindRoots</span>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 sm:gap-4">
             <button
               onClick={handleSignIn}
               disabled={signingIn}
-              className="text-sm font-medium text-slate-400 hover:text-white transition-colors"
+              className="text-xs sm:text-sm font-medium text-slate-400 hover:text-white transition-colors"
             >
               Sign In
             </button>
             <button
               onClick={handleSignIn}
               disabled={signingIn}
-              className="bg-white text-black text-sm font-semibold px-5 py-2.5 rounded-xl hover:bg-slate-100 transition-all shadow-lg shadow-white/10"
+              className="bg-white text-black text-xs sm:text-sm font-semibold px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl hover:bg-slate-100 transition-all shadow-lg shadow-white/10"
             >
               {signingIn ? 'Signing in...' : 'Get Started'}
             </button>
@@ -126,6 +126,31 @@ export default function LandingPage() {
             <button className="w-full sm:w-auto px-8 py-4 bg-white/5 border border-white/10 text-white font-medium rounded-xl hover:bg-white/10 transition-colors">
               How it works
             </button>
+          </div>
+        </div>
+      </section>
+
+      {/* Video Demo Window */}
+      <section className="relative pb-24 max-w-5xl mx-auto px-4 sm:px-6 z-10">
+        <div className="glass-card rounded-2xl overflow-hidden border border-white/10 shadow-[0_20px_50px_-12px_rgba(129,140,248,0.25)]">
+          {/* Mac window header */}
+          <div className="bg-white/5 border-b border-white/5 px-4 py-3 flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full bg-[#ff5f56]" />
+            <div className="w-3 h-3 rounded-full bg-[#ffbd2e]" />
+            <div className="w-3 h-3 rounded-full bg-[#27c93f]" />
+          </div>
+          {/* Video content */}
+          <div className="relative aspect-video w-full bg-black">
+            <iframe 
+              width="100%" 
+              height="100%" 
+              src="https://www.youtube.com/embed/jNQXAC9IVRw?rel=0" 
+              title="MindRoots Demo" 
+              frameBorder="0" 
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+              allowFullScreen
+              className="absolute inset-0 w-full h-full"
+            ></iframe>
           </div>
         </div>
       </section>
