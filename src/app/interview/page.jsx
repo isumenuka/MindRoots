@@ -74,7 +74,11 @@ export default function InterviewPage() {
 
       svc.onTranscript = (entry) => {
         addTranscriptEntry(entry)
-        if (entry.role === 'assistant') setAgentStatus('listening')
+        // Don't setAgentStatus('listening') here, wait for turnComplete
+      }
+
+      svc.onTurnComplete = () => {
+        setAgentStatus('listening')
       }
 
       svc.onBeliefFound = async (rawNode) => {

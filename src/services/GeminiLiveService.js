@@ -59,7 +59,8 @@ class GeminiLiveService {
 
   init(apiKey) {
     this._apiKey = apiKey
-    this.ai = new GoogleGenAI({ apiKey })
+    // Use v1alpha to enable proactive audio & affective dialog
+    this.ai = new GoogleGenAI({ apiKey, httpOptions: { apiVersion: 'v1alpha' } })
     this._initialized = true
   }
 
@@ -77,6 +78,9 @@ class GeminiLiveService {
           systemInstruction: {
             parts: [{ text: SOCRATIC_SYSTEM_PROMPT }]
           },
+          // Enable v1alpha features for significantly better voice interaction
+          enableAffectiveDialog: true,
+          proactivity: { proactiveAudio: true }
         },
         callbacks: {
           onopen: () => {
@@ -164,9 +168,9 @@ class GeminiLiveService {
       this.onTranscript?.({ role: 'user', text })
     }
 
-    // Turn complete — nothing special needed here
+    // Turn complete — good time to switch UI back to 'listening'
     if (sc?.turnComplete) {
-      // Future: could signal UI state
+      this.onTurnComplete?.()
     }
   }
 
@@ -192,18 +196,14 @@ class GeminiLiveService {
     }
   }
 
-  // Trigger the agent to speak first by injecting a user turn that
-  // prompts the greeting, then signalling turnComplete so Gemini responds.
+  // Trigger the agent to speak first by simulating a user message
+  // using sendRealtimeInput, which is more reliable than sendClientContent.
   async triggerAgentStart() {
     if (!this.session || !this.isConnected) return
     try {
-      // Give the WebSocket a moment to fully stabilise after onopen
-      await new Promise(r => setTimeout(r, 300))
-      await this.session.sendClientContent({
-        turns: [
-          { role: 'user', parts: [{ text: 'Hello, I am ready to begin.' }] }
-        ],
-        turnComplete: true,
+      await new Promise(r => setTimeout(r, 400))
+      await this.session.sendRealtimeInput({ 
+        text: 'Hello. I am ready to begin. Please greet me warmly and ask me to share a belief.'
       })
       console.log('[GeminiLive] Agent start triggered')
     } catch (e) {
