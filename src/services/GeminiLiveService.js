@@ -192,12 +192,17 @@ class GeminiLiveService {
     }
   }
 
-  // Trigger the agent to speak first (sends a turn-complete signal with no user input)
+  // Trigger the agent to speak first by injecting a user turn that
+  // prompts the greeting, then signalling turnComplete so Gemini responds.
   async triggerAgentStart() {
     if (!this.session || !this.isConnected) return
     try {
+      // Give the WebSocket a moment to fully stabilise after onopen
+      await new Promise(r => setTimeout(r, 300))
       await this.session.sendClientContent({
-        turns: [],
+        turns: [
+          { role: 'user', parts: [{ text: 'Hello, I am ready to begin.' }] }
+        ],
         turnComplete: true,
       })
       console.log('[GeminiLive] Agent start triggered')
