@@ -9,6 +9,8 @@ const ADMIN_UIDS = (process.env.NEXT_PUBLIC_ADMIN_UIDS || '').split(',').map(s =
 
 const VOICES = ['Aoede', 'Charon', 'Fenrir', 'Kore', 'Puck', 'Orbit', 'Zephyr', 'Leda']
 const MODELS = [
+  'gemini-2.0-flash-exp',
+  'gemini-2.5-flash',
   'gemini-2.5-flash-native-audio-preview-12-2025',
 ]
 
@@ -70,14 +72,14 @@ export default function AdminPage() {
     voice: 'Puck',
     temperature: 1.0,
     max_excavations: 5,
-    enable_affective_dialog: true,
-    enable_proactive_audio: true,
+    enable_affective_dialog: false,
+    enable_proactive_audio: false,
     enable_google_grounding: false,
-    enable_input_transcription: true,
-    enable_output_transcription: true,
+    enable_input_transcription: true,  // Kept true to drive the app's chat UI
+    enable_output_transcription: true, // Kept true to drive the app's chat UI
     vad_start_sensitivity: 'DEFAULT',
     vad_end_sensitivity: 'DEFAULT',
-    vad_silence_duration_ms: 500,
+    vad_silence_duration_ms: 2000,
     vad_prefix_padding_ms: 500,
     system_prompt: '',
   })

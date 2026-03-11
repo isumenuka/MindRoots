@@ -44,19 +44,18 @@ async function structureBeliefs(rawBeliefNodes, apiKey) {
 
   let text = ''
   try {
-    const interaction = await ai.interactions.create({
+    const response = await ai.models.generateContent({
       model: FLASH_MODEL,
       config: {
         systemInstruction: { parts: [{ text: STRUCTURER_SYSTEM_PROMPT }] },
         temperature: 0.7,
         maxOutputTokens: 4096,
       },
-      input: prompt
+      contents: prompt
     })
     
     // Find text output
-    const output = interaction.outputs.length > 0 ? interaction.outputs[interaction.outputs.length - 1] : null
-    text = output?.text || ''
+    text = response.text || ''
   } catch (e) {
     throw new Error(`Gemini Flash error: ${e.message}`)
   }
