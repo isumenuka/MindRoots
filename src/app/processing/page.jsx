@@ -126,7 +126,10 @@ function ProcessingContent() {
           {/* Completion CTA */}
           {status === 'complete' && sessionId && uid && (
             <div className="mt-10 text-center animate-pulse">
-              <p className="text-accent font-semibold mb-4">✨ Your map is ready</p>
+              <p className="text-accent font-semibold mb-4 flex items-center justify-center gap-2">
+                <span className="material-symbols-outlined text-[20px]">check_circle</span>
+                Your map is ready
+              </p>
               <button
                 onClick={() => router.push(`/session/${sessionId}?uid=${uid}`)}
                 className="px-8 py-4 bg-primary text-background-dark font-semibold rounded-xl hover:scale-105 transition-transform shadow-lg shadow-white/10"

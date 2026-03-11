@@ -94,7 +94,10 @@ export default function HistoryPage() {
                 <span className="material-symbols-outlined text-slate-500 group-hover:text-[#818CF8] transition-colors">history_edu</span>
               </div>
               <p className="text-slate-500 text-sm font-medium text-center">No sessions yet. Start your first excavation.</p>
-              <span className="mt-4 text-xs text-[#818CF8] font-semibold uppercase tracking-widest">Begin →</span>
+              <span className="mt-4 flex items-center gap-1 text-xs text-[#818CF8] font-semibold uppercase tracking-widest">
+                Begin
+                <span className="material-symbols-outlined text-[14px]">chevron_right</span>
+              </span>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">

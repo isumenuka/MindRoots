@@ -192,8 +192,9 @@ export default function InterviewPage() {
         <div className="flex items-center gap-6">
           {/* Belief counter */}
           <div className="flex items-center gap-2 px-4 py-2 bg-white/5 rounded-full border border-white/10">
+            <span className="material-symbols-outlined text-[#818CF8] text-[18px]">local_fire_department</span>
             <span className="text-sm font-medium text-slate-300">
-              🔥 <span className="hidden sm:inline">{beliefs.length} core beliefs excavated</span>
+              <span className="hidden sm:inline">{beliefs.length} core beliefs excavated</span>
               <span className="inline sm:hidden">{beliefs.length}/{MAX_BELIEFS}</span>
             </span>
           </div>
@@ -224,8 +225,9 @@ export default function InterviewPage() {
           {/* Status text */}
           <div className="text-center">
             {micError && (
-              <p className="text-amber-400 text-sm mb-2">
-                ⚠ Microphone unavailable — type your responses below
+              <p className="text-amber-400 text-sm mb-2 flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-[16px]">warning</span>
+                Microphone unavailable — type your responses below
               </p>
             )}
             <p className="font-display text-2xl md:text-3xl font-medium text-white max-w-2xl leading-relaxed">
@@ -374,7 +376,7 @@ export default function InterviewPage() {
                   <span className="material-symbols-outlined text-white text-[18px]">send</span>
                 </button>
               </div>
-              <p className="text-center text-[11px] text-slate-600 mt-2">Type instead of speaking · Press Enter to send</p>
+              <p className="text-center text-[11px] text-slate-600 mt-2">Type instead of speaking &mdash; Press Enter to send</p>
             </motion.div>
           )}
         </AnimatePresence>
