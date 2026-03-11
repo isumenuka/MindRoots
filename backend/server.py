@@ -28,7 +28,9 @@ import json
 import os
 import re
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Header
+from pydantic import BaseModel
+from typing import Optional
 from fastapi.middleware.cors import CORSMiddleware
 from google import genai
 from google.genai import types
@@ -41,8 +43,24 @@ GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 if not GEMINI_API_KEY:
     raise RuntimeError("GEMINI_API_KEY not found in backend/.env")
 
+ADMIN_SECRET = os.environ.get("ADMIN_SECRET", "mindroots-admin-2025")
+
 LIVE_MODEL = "gemini-2.5-flash-native-audio-preview-12-2025"
 COMPLETION_PHRASE = "your belief map is now being drawn"
+
+# ─── Live config (mutable — updated by admin dashboard, no restart needed) ──
+live_config: dict = {
+    "model": LIVE_MODEL,
+    "voice": "Kore",
+    "temperature": 1.0,
+    "max_excavations": 5,
+    "enable_affective_dialog": True,
+    "enable_proactive_audio": True,
+    "vad_start_sensitivity": "LOW",   # LOW | HIGH
+    "vad_end_sensitivity": "LOW",     # LOW | HIGH
+    "vad_silence_duration_ms": 2000,
+    "system_prompt": None,  # None = use SOCRATIC_SYSTEM_PROMPT default
+}
 
 SOCRATIC_SYSTEM_PROMPT = """You are the Socratic Interviewer — a deeply empathetic AI archaeologist who excavates the hidden origins of human beliefs.
 
@@ -92,6 +110,20 @@ app.add_middleware(
 )
 
 
+# ─── Admin config endpoints ─────────────────────────────────────────────────
+class ConfigUpdate(BaseModel):
+    model: Optional[str] = None
+    voice: Optional[str] = None
+    temperature: Optional[float] = None
+    max_excavations: Optional[int] = None
+    enable_affective_dialog: Optional[bool] = None
+    enable_proactive_audio: Optional[bool] = None
+    vad_start_sensitivity: Optional[str] = None
+    vad_end_sensitivity: Optional[str] = None
+    vad_silence_duration_ms: Optional[int] = None
+    system_prompt: Optional[str] = None
+
+
 # ─── Helpers ────────────────────────────────────────────────────────────────
 def parse_belief_nodes(text: str) -> list[dict]:
     nodes = []
@@ -110,39 +142,70 @@ async def send_json(ws: WebSocket, payload: dict):
         pass  # client may have disconnected
 
 
+# ─── Admin REST endpoints ────────────────────────────────────────────────────
+@app.get("/api/config")
+async def get_config():
+    """Return current live config (admin dashboard reads this on load)."""
+    return {**live_config, "default_system_prompt": SOCRATIC_SYSTEM_PROMPT[:200] + "..."}
+
+
+@app.post("/api/config")
+async def update_config(
+    update: ConfigUpdate,
+    x_admin_secret: Optional[str] = Header(default=None),
+):
+    """Update live config. Requires X-Admin-Secret header matching ADMIN_SECRET env var."""
+    if x_admin_secret != ADMIN_SECRET:
+        raise HTTPException(status_code=403, detail="Invalid admin secret")
+
+    updated = {}
+    for field, value in update.model_dump(exclude_none=True).items():
+        live_config[field] = value
+        updated[field] = value
+
+    print(f"[Admin] Config updated: {list(updated.keys())}")
+    return {"ok": True, "updated": updated, "config": live_config}
+
+
 # ─── WebSocket endpoint ─────────────────────────────────────────────────────
 @app.websocket("/ws")
 async def gemini_live_proxy(ws: WebSocket):
     await ws.accept()
     print("[Proxy] Browser connected")
+    # Snapshot config at connection time
+    cfg = dict(live_config)
+    system_prompt_text = cfg.get("system_prompt") or SOCRATIC_SYSTEM_PROMPT
+
+    start_sens = (types.StartSensitivity.START_SENSITIVITY_LOW
+                  if cfg.get("vad_start_sensitivity", "LOW") == "LOW"
+                  else types.StartSensitivity.START_SENSITIVITY_HIGH)
+    end_sens   = (types.EndSensitivity.END_SENSITIVITY_LOW
+                  if cfg.get("vad_end_sensitivity", "LOW") == "LOW"
+                  else types.EndSensitivity.END_SENSITIVITY_HIGH)
 
     session_config = types.LiveConnectConfig(
         response_modalities=[types.Modality.AUDIO],
         system_instruction=types.Content(
-            parts=[types.Part(text=SOCRATIC_SYSTEM_PROMPT)]
+            parts=[types.Part(text=system_prompt_text)]
         ),
-        generation_config=types.GenerationConfig(
-            speech_config=types.SpeechConfig(
-                voice_config=types.VoiceConfig(
-                    prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name="Kore")
+        speech_config=types.SpeechConfig(
+            voice_config=types.VoiceConfig(
+                prebuilt_voice_config=types.PrebuiltVoiceConfig(
+                    voice_name=cfg.get("voice", "Kore")
                 )
             )
         ),
         input_audio_transcription=types.AudioTranscriptionConfig(),
         output_audio_transcription=types.AudioTranscriptionConfig(),
-        enable_affective_dialog=True,
-        proactivity=types.ProactivityConfig(proactive_audio=True),
-        # ── VAD / noise settings ─────────────────────────────────────────
+        enable_affective_dialog=cfg.get("enable_affective_dialog", True),
+        proactivity=types.ProactivityConfig(
+            proactive_audio=cfg.get("enable_proactive_audio", True)
+        ),
         realtime_input_config=types.RealtimeInputConfig(
             automatic_activity_detection=types.AutomaticActivityDetection(
-                # Require clearer/louder audio before speech detection starts
-                # LOW = less easily triggered → ignores background noise
-                start_of_speech_sensitivity=types.StartSensitivity.START_SENSITIVITY_LOW,
-                # Don't end speech turn on brief pauses / noise gaps
-                end_of_speech_sensitivity=types.EndSensitivity.END_SENSITIVITY_LOW,
-                # Wait 2 seconds of real silence before ending a turn
-                silence_duration_ms=2000,
-                # Include 300ms of audio before detected speech (captures full words)
+                start_of_speech_sensitivity=start_sens,
+                end_of_speech_sensitivity=end_sens,
+                silence_duration_ms=cfg.get("vad_silence_duration_ms", 2000),
                 prefix_padding_ms=300,
             )
         ),
@@ -150,8 +213,9 @@ async def gemini_live_proxy(ws: WebSocket):
 
     try:
         async with client.aio.live.connect(
-            model=LIVE_MODEL, config=session_config
+            model=cfg.get("model", LIVE_MODEL), config=session_config
         ) as gemini_session:
+
             print("[Proxy] Gemini Live session opened")
             await send_json(ws, {"type": "ready"})
 
