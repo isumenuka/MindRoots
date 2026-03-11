@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { auth, onAuthStateChanged } from '@/services/FirebaseService'
 import useFirestoreListener from '@/hooks/useFirestoreListener'
@@ -25,7 +25,7 @@ const STAGE_PROGRESS = {
   complete: 100,
 }
 
-export default function ProcessingPage() {
+function ProcessingContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const sessionId = searchParams.get('sessionId')
@@ -57,58 +57,63 @@ export default function ProcessingPage() {
   const message = STAGE_MESSAGES[status] || 'Processing...'
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A] text-white flex flex-col relative">
-      {/* Ambient backgrounds */}
-      <div className="fixed inset-0 ambient-gradient pointer-events-none" />
-      <div className="fixed top-[-10%] left-[-10%] w-[40%] h-[40%] bg-[#818CF8]/5 blur-[120px] rounded-full pointer-events-none" />
-      <div className="fixed bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-[#818CF8]/5 blur-[120px] rounded-full pointer-events-none" />
-      <div className="absolute top-1/2 right-[15%] w-px h-32 bg-gradient-to-b from-transparent via-[#818CF8]/30 to-transparent" />
-      <div className="absolute bottom-[25%] left-[12%] w-px h-24 bg-gradient-to-b from-transparent via-[#818CF8]/20 to-transparent" />
+    <div className="min-h-screen flex flex-col relative overflow-hidden">
+      {/* Ambient Background Effect */}
+      <div className="fixed inset-0 ambient-gradient pointer-events-none"></div>
+      <div className="fixed top-[-10%] left-[-10%] w-[40%] h-[40%] bg-accent/5 blur-[120px] rounded-full"></div>
+      <div className="fixed bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-accent/5 blur-[120px] rounded-full"></div>
+      {/* Background Decorative Elements */}
+      <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full pointer-events-none opacity-20">
+        <div className="absolute top-[20%] right-[15%] w-px h-32 bg-gradient-to-b from-transparent via-accent to-transparent"></div>
+        <div className="absolute bottom-[20%] left-[15%] w-px h-32 bg-gradient-to-b from-transparent via-accent to-transparent"></div>
+      </div>
 
-      {/* Header */}
+      {/* Top Navigation */}
       <header className="relative z-10 flex items-center justify-between px-8 py-6 max-w-7xl mx-auto w-full">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 flex items-center justify-center bg-[#818CF8] rounded-lg">
-            <span className="material-symbols-outlined text-white text-xl">auto_awesome</span>
+          <div className="w-8 h-8 flex items-center justify-center bg-primary rounded-lg">
+            <span className="material-symbols-outlined text-background-dark text-xl font-bold">auto_awesome</span>
           </div>
-          <h1 className="font-display text-[#818CF8] text-xl font-semibold tracking-tight">MindRoots</h1>
+          <h1 className="font-display text-primary text-xl font-semibold tracking-tight">MindRoots</h1>
         </div>
-        <button
-          onClick={() => router.push('/')}
-          className="text-slate-500 hover:text-white transition-colors"
-        >
-          <span className="material-symbols-outlined">close</span>
-        </button>
+        <div className="flex items-center gap-6">
+          <button
+            onClick={() => router.push('/')}
+            className="text-muted hover:text-primary transition-colors"
+          >
+            <span className="material-symbols-outlined">close</span>
+          </button>
+        </div>
       </header>
 
-      {/* Main */}
+      {/* Main Content */}
       <main className="relative z-10 flex-1 flex flex-col items-center justify-center px-6 py-12">
         <div className="max-w-2xl w-full">
-          {/* Header */}
-          <div className="text-center mb-14">
-            <h2 className="font-display text-4xl md:text-5xl text-white font-light mb-4 tracking-tight">
-              Excavating your <span className="italic text-[#818CF8]">inner world</span>
+          {/* Header Section */}
+          <div className="text-center mb-16">
+            <h2 className="font-display text-4xl md:text-5xl text-primary font-light mb-4 tracking-tight">
+              Excavating your <span className="italic">inner world</span>
             </h2>
-            <p className="text-slate-500 text-lg max-w-md mx-auto">
-              Our AI agents are weaving your belief archaeology through three sequential stages.
+            <p className="text-muted text-lg max-w-md mx-auto">
+              Our AI agents are weaving your belief archaeology. This may take a moment.
             </p>
           </div>
 
           {/* Stages */}
           <ProcessingStages sessionStatus={status} />
 
-          {/* Progress bar */}
-          <div className="mt-16 pt-8 border-t border-white/5">
+          {/* Footer Progress */}
+          <div className="mt-20 pt-8 border-t border-white/5">
             <div className="flex justify-between items-end mb-3">
-              <div>
-                <span className="text-xs uppercase tracking-[0.2em] text-[#818CF8] font-semibold mb-1 block">Status</span>
-                <span className="text-white font-medium">{message}</span>
+              <div className="flex flex-col">
+                <span className="text-xs uppercase tracking-[0.2em] text-accent font-semibold mb-1">Status</span>
+                <span className="text-primary font-medium">{message}</span>
               </div>
-              <span className="text-white font-display text-2xl font-light">{progress}%</span>
+              <span className="text-primary font-display text-2xl font-light">{progress}%</span>
             </div>
             <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
               <div
-                className="h-full bg-[#818CF8] rounded-full shadow-[0_0_10px_rgba(129,140,248,0.5)] transition-all duration-1000"
+                className="h-full bg-accent shadow-[0_0_10px_rgba(129,140,248,0.5)] transition-all duration-1000"
                 style={{ width: `${progress}%` }}
               />
             </div>
@@ -117,10 +122,10 @@ export default function ProcessingPage() {
           {/* Completion CTA */}
           {status === 'complete' && sessionId && uid && (
             <div className="mt-10 text-center animate-pulse">
-              <p className="text-[#818CF8] font-semibold mb-4">✨ Your map is ready</p>
+              <p className="text-accent font-semibold mb-4">✨ Your map is ready</p>
               <button
                 onClick={() => router.push(`/session/${sessionId}?uid=${uid}`)}
-                className="px-8 py-4 bg-white text-black font-semibold rounded-xl hover:scale-105 transition-transform shadow-lg shadow-white/10"
+                className="px-8 py-4 bg-primary text-background-dark font-semibold rounded-xl hover:scale-105 transition-transform shadow-lg shadow-white/10"
               >
                 View Your Belief Origin Tree
               </button>
@@ -129,9 +134,22 @@ export default function ProcessingPage() {
         </div>
       </main>
 
-      <footer className="relative z-10 p-8 text-center text-[10px] uppercase tracking-[0.4em] text-white/10">
-        System Identity: MindRoots-Core-V2 // Session: Archae-{sessionId?.slice(-6) || '---'}
+      {/* Aesthetic Footer */}
+      <footer className="relative z-10 p-8 text-center text-[10px] uppercase tracking-[0.4em] text-dim/40">
+        System Identity: Roots-Core-V2 // Session: Archae-{sessionId?.slice(-6) || '---'}
       </footer>
     </div>
+  )
+}
+
+export default function ProcessingPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex flex-col items-center justify-center relative overflow-hidden bg-[#0A0A0A]">
+        <div className="w-12 h-12 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin"></div>
+      </div>
+    }>
+      <ProcessingContent />
+    </Suspense>
   )
 }

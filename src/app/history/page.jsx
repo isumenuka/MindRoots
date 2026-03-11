@@ -23,93 +23,112 @@ export default function HistoryPage() {
   }, [router])
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A] text-white">
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-0 right-0 w-[40%] h-[30%] bg-[#818CF8]/4 blur-[120px]" />
-      </div>
-
-      {/* Header */}
-      <header className="relative z-10 flex items-center justify-between border-b border-white/5 px-4 py-4 sm:px-6 sm:py-5 lg:px-16">
-        <div className="flex items-center gap-2 sm:gap-3">
-          <button onClick={() => router.push('/')} className="flex items-center gap-2 sm:gap-3 group">
-            <div className="w-8 h-8 bg-[#818CF8] rounded-lg flex items-center justify-center">
-              <span className="material-symbols-outlined text-white text-[18px] sm:text-lg">psychology</span>
+    <div className="relative flex h-auto min-h-screen w-full flex-col group/design-root overflow-x-hidden bg-background-dark">
+      <div className="layout-container flex h-full grow flex-col">
+        {/* Ambient Background Effect */}
+        <div className="fixed inset-0 ambient-gradient pointer-events-none"></div>
+        <div className="fixed top-[-10%] right-[-10%] w-[40%] h-[40%] bg-accent/5 blur-[120px] rounded-full"></div>
+        
+        {/* Top Navigation Bar */}
+        <header className="relative z-10 flex items-center justify-between whitespace-nowrap border-b border-solid border-white/10 px-6 py-4 lg:px-10">
+          <div className="flex items-center gap-4 text-primary cursor-pointer" onClick={() => router.push('/')}>
+            <div className="flex items-center justify-center p-2 rounded-lg bg-accent/20 text-accent">
+              <span className="material-symbols-outlined">psychology</span>
             </div>
-            <h1 className="font-display text-lg sm:text-xl font-bold text-white group-hover:text-[#818CF8] transition-colors hidden sm:block">MindRoots</h1>
-          </button>
-        </div>
-        <div className="flex items-center gap-2 sm:gap-3">
-          <button onClick={() => router.push('/interview')} className="flex items-center gap-1 sm:gap-2 px-3 py-1.5 sm:px-4 sm:py-2 bg-white text-black rounded-xl text-xs sm:text-sm font-semibold hover:bg-slate-100 transition-all">
-            <span className="material-symbols-outlined text-[16px] sm:text-lg">add</span>
-            <span className="hidden sm:inline">New Excavation</span>
-            <span className="inline sm:hidden">New</span>
-          </button>
-          <button onClick={() => router.push('/settings')} className="flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-white/5 border border-white/10 text-slate-400 hover:text-white hover:bg-white/10 transition-colors">
-            <span className="material-symbols-outlined text-[16px] sm:text-[18px]">settings</span>
-          </button>
-        </div>
-      </header>
-
-      <main className="relative z-10 max-w-7xl mx-auto px-6 lg:px-16 py-12">
-        <div className="mb-10">
-          <h2 className="font-display text-3xl lg:text-4xl font-bold text-white mb-2">Your Excavations</h2>
-          <p className="text-slate-500">A history of every belief archaeology session.</p>
-        </div>
-
-        {loading ? (
-          <div className="text-center py-20">
-            <div className="w-8 h-8 border-2 border-[#818CF8] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-            <p className="text-slate-500 text-sm">Loading sessions...</p>
+            <h2 className="text-primary text-lg font-bold leading-tight tracking-tight font-display hidden sm:block">MindRoots</h2>
           </div>
-        ) : sessions.length === 0 ? (
-          <div className="text-center py-20 border border-dashed border-white/10 rounded-2xl">
-            <span className="material-symbols-outlined text-5xl text-slate-700 mb-4 block">history</span>
-            <p className="text-slate-400 font-display text-xl font-semibold mb-2">No sessions yet</p>
-            <p className="text-slate-600 text-sm mb-6">Start your first belief excavation to see your history here.</p>
-            <button onClick={() => router.push('/interview')} className="px-6 py-3 bg-[#818CF8] text-white rounded-xl font-semibold hover:bg-[#818CF8]/80 transition-all">
-              Begin Excavation
-            </button>
+          
+          <div className="flex flex-1 justify-end gap-4 lg:gap-8 items-center">
+            <div className="flex gap-2">
+              <button onClick={() => router.push('/interview')} className="bg-primary text-background-dark px-4 sm:px-6 py-2.5 rounded-lg font-bold text-sm hover:bg-slate-200 transition-colors flex items-center gap-2">
+                <span className="material-symbols-outlined text-[18px]">add</span>
+                <span className="hidden sm:inline">New Session</span>
+                <span className="inline sm:hidden">New</span>
+              </button>
+              <button
+                onClick={() => router.push('/settings')}
+                className="flex items-center justify-center rounded-lg h-10 w-10 bg-white/5 border border-white/10 hover:bg-white/10 transition-colors text-slate-400 hover:text-white"
+              >
+                <span className="material-symbols-outlined text-[20px]">settings</span>
+              </button>
+            </div>
           </div>
-        ) : (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {sessions.map((s) => {
-              const date = s.created_at?.toDate?.()?.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) || 'Unknown date'
-              return (
-                <div
-                  key={s.id}
-                  onClick={() => router.push(`/session/${s.id}?uid=${user.uid}`)}
-                  className="glass-card rounded-2xl p-6 cursor-pointer hover:border-[#818CF8]/30 transition-all group"
-                >
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="w-10 h-10 rounded-xl bg-[#818CF8]/15 border border-[#818CF8]/20 flex items-center justify-center">
-                      <span className="material-symbols-outlined text-[#818CF8]">account_tree</span>
-                    </div>
-                    <span className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">{date}</span>
-                  </div>
-                  <h3 className="font-display text-lg font-semibold text-white mb-2 group-hover:text-[#818CF8] transition-colors line-clamp-2">
-                    {s.dominant_theme || 'Belief Excavation Session'}
-                  </h3>
-                  <div className="flex items-center gap-3 mt-4">
-                    <span className="flex items-center gap-1 text-xs text-slate-500">
-                      <span className="material-symbols-outlined text-[14px]">psychology_alt</span>
-                      {s.total_beliefs || '?'} beliefs
-                    </span>
-                    {s.overall_emotional_tone && (
-                      <span className="text-xs text-slate-600 capitalize px-2 py-0.5 rounded-full bg-white/5 border border-white/10">
-                        {s.overall_emotional_tone}
-                      </span>
-                    )}
-                  </div>
-                  <div className="mt-4 flex items-center text-xs text-[#818CF8] font-semibold gap-1 group-hover:gap-2 transition-all">
-                    View map
-                    <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
-                  </div>
+        </header>
+
+        {/* Main Content Area */}
+        <main className="relative z-10 flex-1 p-6 lg:p-10 overflow-y-auto">
+          <div className="max-w-6xl mx-auto">
+            {/* Content Header */}
+            <div className="flex flex-col gap-1 mb-10">
+              <h1 className="text-slate-100 text-3xl md:text-4xl font-black leading-tight tracking-tight font-display">Your Archives</h1>
+              <p className="text-muted text-base lg:text-lg">A reflective gallery of your past mental landscapes.</p>
+            </div>
+
+            {loading ? (
+              <div className="text-center py-20">
+                <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+                <p className="text-muted text-sm uppercase tracking-widest font-semibold">Loading archives...</p>
+              </div>
+            ) : sessions.length === 0 ? (
+              <div
+                onClick={() => router.push('/interview')}
+                className="border-2 border-dashed border-white/10 rounded-xl flex flex-col items-center justify-center p-10 group hover:border-accent/30 transition-all cursor-pointer"
+              >
+                <div className="h-16 w-16 rounded-full bg-white/5 flex items-center justify-center mb-4 group-hover:bg-accent/10 transition-colors">
+                  <span className="material-symbols-outlined text-muted group-hover:text-accent">history_edu</span>
                 </div>
-              )
-            })}
+                <p className="text-muted text-sm font-medium text-center">Start a new reflective journey to grow your archive.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {sessions.map((s) => {
+                  const date = s.created_at?.toDate?.()?.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) || 'Unknown date'
+                  
+                  return (
+                    <div
+                      key={s.id}
+                      onClick={() => router.push(`/session/${s.id}?uid=${user.uid}`)}
+                      className="bg-card/50 backdrop-blur-md border border-white/10 rounded-xl overflow-hidden group hover:border-accent/50 hover:shadow-[0_0_15px_rgba(129,140,248,0.15)] transition-all duration-300 cursor-pointer flex flex-col"
+                    >
+                      <div
+                        className="h-32 sm:h-40 w-full bg-center bg-cover relative"
+                        style={{
+                          backgroundImage: `linear-gradient(to bottom, rgba(10,10,10,0.2), rgba(10,10,10,0.8)), url('https://lh3.googleusercontent.com/aida-public/AB6AXuDT8nthmBSxAqqhJHmrb77-fhfOd5kERXw8a15LUiDwxBq370rTOw_75UfZrOS5Xd9vl-DmQkjKz0qTQeAQPOS1O07L7zSkc-iOULnVifM5Bus-3pKvMLqmpreu5VtMPG7lerRyGICzYxEd2mpoyrUbnpufNbRjrPzJySrPpXsLemL6zQTLhkUh55vN8YHKT13SmuMxAxv-X1t7DFgcHQJYg-ctdg7bGYj3Tu0PdKdnufvHBrF-_CPPj2t5JnIIWtg5LJa1csUpxsE')`
+                        }}
+                      >
+                        {s.overall_emotional_tone && (
+                          <div className="absolute top-4 right-4 bg-background-dark/80 backdrop-blur-md px-2 py-1 rounded-md border border-white/10">
+                            <span className="text-[10px] font-bold text-accent uppercase tracking-tighter">
+                              {s.overall_emotional_tone}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="p-6 flex flex-col gap-4 grow">
+                        <h3 className="text-slate-100 text-xl font-bold font-display group-hover:text-accent transition-colors line-clamp-2">
+                          {s.dominant_theme || 'Belief Excavation Session'}
+                        </h3>
+                        
+                        <div className="flex items-center justify-between mt-auto pt-2">
+                          <div className="flex flex-col">
+                            <span className="text-muted text-xs uppercase tracking-widest font-semibold">Session Date</span>
+                            <span className="text-slate-400 text-sm font-display">{date}</span>
+                          </div>
+                          <div className="flex flex-col items-end">
+                            <span className="text-muted text-xs uppercase tracking-widest font-semibold">Depth</span>
+                            <span className="text-slate-400 text-sm font-display">{s.total_beliefs || '?'} Beliefs</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </div>
-        )}
-      </main>
+        </main>
+      </div>
     </div>
   )
 }

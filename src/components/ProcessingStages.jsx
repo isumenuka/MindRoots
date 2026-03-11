@@ -1,11 +1,11 @@
 'use client'
 
 const STAGES = [
-  { label: 'Agent 1 complete', desc: 'Your beliefs have been excavated' },
-  { label: 'Agent 2 at work', desc: 'Structuring your belief map...' },
-  { label: 'Agent 3 — Generating illustrations', desc: 'Creating your visual memory...' },
-  { label: 'Recording narration', desc: 'Weaving your story together...' },
-  { label: 'Drawing your Belief Origin Tree', desc: 'Final composition...' },
+  { labelDone: 'Agent 1 complete', labelActive: 'Agent 1 active', labelPending: 'Agent 1 pending', descDone: 'Your beliefs have been excavated', descActive: 'Excavating your beliefs...', descPending: 'Awaiting' },
+  { labelDone: 'Agent 2 complete', labelActive: 'Agent 2 active', labelPending: 'Agent 2 pending', descDone: 'Structuring your belief map', descActive: 'Structuring your belief map...', descPending: 'Awaiting structuring' },
+  { labelDone: 'Agent 3 complete', labelActive: 'Agent 3 active', labelPending: 'Agent 3 pending', descDone: 'Illustrations generated', descActive: 'Generating your illustrations...', descPending: 'Awaiting generation' },
+  { labelDone: 'Narration recorded', labelActive: 'Recording narration...', labelPending: 'Recording narration...', descDone: 'Story woven together', descActive: 'Weaving your story together...', descPending: 'Awaiting processing' },
+  { labelDone: 'Belief Origin Tree ready', labelActive: 'Drawing your Belief Origin Tree...', labelPending: 'Drawing your Belief Origin Tree...', descDone: 'Final composition complete', descActive: 'Final sequence...', descPending: 'Final sequence' },
 ]
 
 const STATUS_TO_STAGE = {
@@ -34,12 +34,12 @@ export default function ProcessingStages({ sessionStatus }) {
         return (
           <div key={i} className={`relative flex gap-6 ${i < STAGES.length - 1 ? 'pb-10' : ''} group`}>
             {/* Stage icon */}
-            <div className={`relative z-10 flex items-center justify-center w-10 h-10 rounded-full border transition-all ${
+            <div className={`relative z-10 flex items-center justify-center w-10 h-10 rounded-full transition-all ${
               isDone
-                ? 'bg-[#818CF8]/20 border-[#818CF8]/30 text-[#818CF8]'
+                ? 'bg-accent/20 border border-accent/30 text-accent'
                 : isActive
-                ? 'bg-white border-white text-black shadow-[0_0_20px_rgba(255,255,255,0.3)]'
-                : 'bg-transparent border-white/20 text-white/20'
+                ? 'bg-primary border border-primary text-background-dark shadow-[0_0_20px_rgba(255,255,255,0.3)]'
+                : 'bg-transparent border border-dim text-dim'
             }`}>
               {isDone ? (
                 <span className="material-symbols-outlined text-xl">check</span>
@@ -51,16 +51,16 @@ export default function ProcessingStages({ sessionStatus }) {
             </div>
 
             {/* Stage text */}
-            <div className="flex flex-col justify-center">
+            <div className="flex flex-col">
               <h3 className={`font-medium text-lg leading-tight ${
-                isDone ? 'text-white/70' : isActive ? 'text-white font-semibold' : 'text-white/20'
+                isDone ? 'text-primary' : isActive ? 'text-primary font-semibold' : 'text-dim'
               }`}>
-                {stage.label}
+                {isDone ? stage.labelDone : isActive ? stage.labelActive : stage.labelPending}
               </h3>
-              <p className={`text-sm ${
-                isDone ? 'text-white/40' : isActive ? 'text-[#818CF8]/80' : 'text-white/10'
+              <p className={`${
+                isDone ? 'text-muted' : isActive ? 'text-primary/80' : 'text-dim/60'
               }`}>
-                {isDone ? '✓ Complete' : stage.desc}
+                {isDone ? stage.descDone : isActive ? stage.descActive : stage.descPending}
               </p>
             </div>
           </div>

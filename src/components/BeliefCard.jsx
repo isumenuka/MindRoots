@@ -12,10 +12,10 @@ export default function BeliefCard({ node, index }) {
   const weightColor = emotionColors[node.emotional_weight] || '#818CF8'
 
   return (
-    <div className="relative flex flex-col lg:flex-row gap-0 bg-[rgba(255,255,255,0.03)] border border-white/5 rounded-xl overflow-hidden group hover:border-[#818CF8]/30 transition-all duration-500">
+    <div className="relative flex flex-col lg:flex-row gap-6 bg-card border border-white/5 rounded-xl overflow-hidden group hover:border-accent/30 transition-all duration-500 shadow-xl shadow-black/20">
       {/* Left: Illustration */}
       <div className="lg:w-1/3 h-52 lg:h-auto relative overflow-hidden min-h-[200px]">
-        <div className="absolute inset-0 bg-gradient-to-r from-[#0A0A0A]/80 to-transparent z-10" />
+        <div className="absolute inset-0 bg-gradient-to-r from-background-dark/80 to-transparent z-10" />
         {node.illustration_url ? (
           <img
             src={node.illustration_url}
@@ -23,46 +23,47 @@ export default function BeliefCard({ node, index }) {
             className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
           />
         ) : (
-          <div className="w-full h-full bg-gradient-to-br from-[#1a1a2e] to-[#0d0d1a] transition-transform duration-700 group-hover:scale-110" />
+          <div className="w-full h-full bg-slate-900 bg-cover bg-center transition-transform duration-700 group-hover:scale-110" />
         )}
         <div className="absolute bottom-4 left-4 z-20">
-          <span className="text-[40px] font-display font-black text-white/10">
+          <span className="text-[40px] font-display font-black text-white/10 group-hover:text-white/20 transition-colors duration-500">
             {String(index + 1).padStart(2, '0')}
           </span>
         </div>
       </div>
 
       {/* Right: Content */}
-      <div className="lg:w-2/3 p-6 lg:p-8 flex flex-col justify-center">
+      <div className="lg:w-2/3 p-6 lg:p-8 flex flex-col justify-center relative">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-accent/5 rounded-full blur-3xl group-hover:bg-accent/10 transition-colors duration-700 pointer-events-none"></div>
         {/* Origin timeline marker */}
-        <div className="flex items-center gap-3 mb-4">
-          <div className="h-px w-8 bg-[#818CF8]/40" />
+        <div className="flex items-center gap-3 mb-4 relative z-10">
+          <div className="h-px w-8 bg-accent/40" />
           <div className="flex items-center gap-2">
             <div
               className="size-2 rounded-full shadow-[0_0_8px_rgba(129,140,248,0.8)]"
               style={{ backgroundColor: weightColor }}
             />
-            <span className="text-xs font-bold text-[#818CF8] uppercase tracking-widest">
+            <span className="text-xs font-bold text-accent uppercase tracking-widest">
               Origin: {node.origin_year} {node.age_at_origin ? `(Age ${node.age_at_origin})` : ''} · {node.origin_person}
             </span>
           </div>
         </div>
 
         {/* Belief statement */}
-        <h3 className="text-2xl font-display font-semibold text-slate-100 mb-4 leading-tight">
+        <h3 className="text-2xl font-display font-semibold text-slate-100 mb-4 leading-tight relative z-10">
           "{node.belief}"
         </h3>
 
         {/* Written analysis */}
         {node.written_analysis && (
-          <p className="text-slate-400 leading-relaxed mb-6 text-sm lg:text-base">
+          <p className="text-slate-400 font-body leading-relaxed mb-6 text-sm lg:text-base relative z-10 group-hover:text-slate-300 transition-colors duration-300">
             {node.written_analysis}
           </p>
         )}
 
         {/* Cost Today */}
-        <div className="bg-[rgba(255,255,255,0.03)] rounded-lg p-4 border-l-2 border-[#818CF8]/50">
-          <p className="text-xs font-bold text-[#818CF8] uppercase tracking-widest mb-1">Cost Today</p>
+        <div className="bg-surface rounded-lg p-4 border-l-2 border-accent/50 relative z-10 group-hover:border-accent transition-colors duration-300">
+          <p className="text-xs font-bold text-accent uppercase tracking-widest mb-1">Cost Today</p>
           <p className="text-slate-300 text-sm italic">{node.cost_today}</p>
         </div>
 

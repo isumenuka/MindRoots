@@ -90,10 +90,14 @@ export default function SessionPage({ params }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0A0A0A] flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-8 h-8 border-2 border-[#818CF8] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-slate-500 text-sm">Loading your belief map...</p>
+      <div className="min-h-screen bg-background-dark flex flex-col items-center justify-center relative overflow-hidden">
+        {/* Ambient Background Effect */}
+        <div className="fixed inset-0 ambient-gradient pointer-events-none"></div>
+        <div className="fixed top-[-10%] left-[-10%] w-[40%] h-[40%] bg-accent/5 blur-[120px] rounded-full"></div>
+        <div className="fixed bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-accent/5 blur-[120px] rounded-full"></div>
+        <div className="text-center relative z-10">
+          <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-muted text-sm uppercase tracking-widest font-semibold">Loading your belief map...</p>
         </div>
       </div>
     )
@@ -103,45 +107,45 @@ export default function SessionPage({ params }) {
   const sessionDate = session?.created_at?.toDate?.()?.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) || 'Session'
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A] text-white">
+    <div className="min-h-screen flex flex-col relative overflow-hidden">
       {/* Background */}
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-0 left-0 w-[50%] h-[30%] bg-[#818CF8]/4 blur-[120px]" />
-      </div>
+      <div className="fixed inset-0 ambient-gradient pointer-events-none"></div>
+      <div className="fixed top-[-10%] left-[-10%] w-[40%] h-[40%] bg-accent/5 blur-[120px] rounded-full"></div>
+      <div className="fixed bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-accent/5 blur-[120px] rounded-full"></div>
 
       {/* Header */}
-      <header className="relative z-10 flex items-center justify-between border-b border-white/5 px-4 py-4 sm:px-6 sm:py-5 lg:px-16">
+      <header className="relative z-10 flex items-center justify-between border-b border-white/5 px-6 py-4 lg:px-40">
         <div className="flex items-center gap-2 sm:gap-3">
           <button onClick={() => router.push('/')} className="flex items-center gap-2 sm:gap-3 group">
-            <div className="w-8 h-8 sm:w-8 sm:h-8 bg-[#818CF8] rounded-lg flex items-center justify-center">
-              <span className="material-symbols-outlined text-white text-[18px] sm:text-lg">psychology</span>
+            <div className="w-8 h-8 sm:w-8 sm:h-8 bg-primary rounded-lg flex items-center justify-center">
+              <span className="material-symbols-outlined text-background-dark text-[18px] sm:text-lg font-bold">psychology</span>
             </div>
-            <h1 className="font-display text-lg sm:text-xl font-bold text-white group-hover:text-[#818CF8] transition-colors hidden sm:block">MindRoots</h1>
+            <h1 className="font-display text-lg sm:text-xl font-bold text-primary transition-colors hidden sm:block">MindRoots</h1>
           </button>
         </div>
         <div className="flex gap-2 sm:gap-3">
           <button
             onClick={() => router.push('/history')}
-            className="flex items-center justify-center rounded-xl h-8 w-8 sm:h-9 sm:w-9 bg-white/5 text-slate-400 hover:text-white hover:bg-white/10 transition-colors border border-white/10"
+            className="flex items-center justify-center rounded-xl h-10 w-10 bg-surface text-slate-100 hover:bg-white/10 transition-colors"
           >
-            <span className="material-symbols-outlined text-[16px] sm:text-[18px]">history</span>
+            <span className="material-symbols-outlined text-[20px] sm:text-[20px]">history</span>
           </button>
           <button
             onClick={() => router.push('/settings')}
-            className="flex items-center justify-center rounded-xl h-8 w-8 sm:h-9 sm:w-9 bg-white/5 text-slate-400 hover:text-white hover:bg-white/10 transition-colors border border-white/10"
+            className="flex items-center justify-center rounded-xl h-10 w-10 bg-surface text-slate-100 hover:bg-white/10 transition-colors"
           >
-            <span className="material-symbols-outlined text-[16px] sm:text-[18px]">settings</span>
+            <span className="material-symbols-outlined text-[20px] sm:text-[20px]">settings</span>
           </button>
         </div>
       </header>
 
-      <main className="relative z-10 flex flex-col items-center">
+      <main className="relative z-10 flex flex-1 flex-col items-center">
         <div className="w-full max-w-[960px] px-6 lg:px-10 py-8">
           {/* Hero */}
-          <div className="mb-10">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#818CF8]/10 border border-[#818CF8]/20 mb-4">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#818CF8] animate-pulse" />
-              <span className="text-xs font-medium text-[#818CF8] uppercase tracking-wider">Analysis Complete</span>
+          <div className="mb-10 text-center lg:text-left">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent/10 border border-accent/20 mb-4">
+              <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
+              <span className="text-xs font-medium text-accent uppercase tracking-wider">Analysis Complete</span>
             </div>
             <h1 className="text-4xl lg:text-5xl font-display font-bold text-slate-100 mb-3 tracking-tight">
               {dominantTheme}
@@ -155,23 +159,25 @@ export default function SessionPage({ params }) {
 
           {/* Sticky action bar */}
           <div className="sticky top-4 z-50 mb-12">
-            <div className="bg-[rgba(10,10,10,0.85)] backdrop-blur-xl border border-white/10 rounded-xl p-3 flex flex-wrap items-center justify-between gap-4 shadow-2xl">
+            <div className="bg-surface/80 backdrop-blur-xl border border-white/10 rounded-xl p-3 flex flex-wrap items-center justify-between gap-4 shadow-2xl">
               {/* Audio Player */}
-              <AudioPlayer src={session?.narration_url || null} title="Session Narration" />
+              <div className="flex items-center gap-4 flex-1 min-w-[280px]">
+                <AudioPlayer src={session?.narration_url || null} title="Session Audio" />
+              </div>
 
               {/* Action buttons */}
               <div className="flex gap-2">
                 <button
                   onClick={handleDownloadPdf}
                   disabled={downloadingPdf}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-sm font-bold text-slate-100 hover:bg-white/10 transition-colors disabled:opacity-50"
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-surface border border-white/10 text-sm font-bold text-slate-100 hover:bg-white/5 transition-colors disabled:opacity-50"
                 >
                   <span className="material-symbols-outlined text-[18px]">download</span>
                   <span>{downloadingPdf ? 'Generating...' : 'PDF'}</span>
                 </button>
                 <button
                   onClick={handleShare}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-sm font-bold text-slate-100 hover:bg-white/10 transition-colors"
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-surface border border-white/10 text-sm font-bold text-slate-100 hover:bg-white/5 transition-colors"
                 >
                   <span className="material-symbols-outlined text-[18px]">{copying ? 'check' : 'share'}</span>
                   <span>{copying ? 'Copied!' : 'Share'}</span>
@@ -182,17 +188,17 @@ export default function SessionPage({ params }) {
 
           {/* Share URL display */}
           {shareUrl && (
-            <div className="mb-8 p-4 rounded-xl border border-[#818CF8]/30 bg-[#818CF8]/5 flex items-center gap-3">
-              <span className="material-symbols-outlined text-[#818CF8] text-sm">link</span>
+            <div className="mb-8 p-4 rounded-xl border border-accent/30 bg-accent/5 flex items-center gap-3">
+              <span className="material-symbols-outlined text-accent text-sm">link</span>
               <p className="text-xs text-slate-400 flex-1 font-mono truncate">{shareUrl}</p>
-              <span className="text-xs text-[#818CF8]">Copied!</span>
+              <span className="text-xs text-accent">Copied!</span>
             </div>
           )}
 
           {/* Belief Cards */}
           <div className="space-y-8 relative">
             {/* Connecting line */}
-            <div className="absolute left-0 lg:left-1/2 top-0 bottom-0 w-px bg-gradient-to-b from-[#818CF8]/50 via-[#818CF8]/10 to-transparent hidden lg:block -translate-x-1/2" />
+            <div className="absolute left-0 lg:left-1/2 top-0 bottom-0 w-px bg-gradient-to-b from-accent/50 via-accent/10 to-transparent hidden lg:block -translate-x-1/2" />
 
             {beliefs.length === 0 ? (
               <div className="text-center py-20">
@@ -207,20 +213,21 @@ export default function SessionPage({ params }) {
 
           {/* Session summary footer */}
           {session?.overall_emotional_tone && (
-            <div className="mt-12 p-6 lg:p-8 rounded-2xl border border-white/5 bg-white/2">
-              <h3 className="font-display text-lg font-bold text-white mb-3">Session Summary</h3>
-              <div className="grid md:grid-cols-3 gap-4 text-sm">
+            <div className="mt-12 p-6 lg:p-8 rounded-2xl border border-white/5 bg-card relative overflow-hidden group">
+              <div className="absolute inset-0 bg-gradient-to-br from-accent/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+              <h3 className="font-display text-lg font-bold text-slate-100 mb-3 relative z-10">Session Summary</h3>
+              <div className="grid md:grid-cols-3 gap-4 text-sm relative z-10">
                 <div>
-                  <p className="text-xs text-[#818CF8] uppercase tracking-widest mb-1">Dominant Theme</p>
-                  <p className="text-slate-300">{session.dominant_theme}</p>
+                  <p className="text-xs text-accent uppercase tracking-widest mb-1">Dominant Theme</p>
+                  <p className="text-slate-300 font-body">{session.dominant_theme}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-[#818CF8] uppercase tracking-widest mb-1">Emotional Tone</p>
-                  <p className="text-slate-300 capitalize">{session.overall_emotional_tone}</p>
+                  <p className="text-xs text-accent uppercase tracking-widest mb-1">Emotional Tone</p>
+                  <p className="text-slate-300 font-body capitalize">{session.overall_emotional_tone}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-[#818CF8] uppercase tracking-widest mb-1">Total Cost</p>
-                  <p className="text-slate-300">{session.estimated_total_cost || 'Significant'}</p>
+                  <p className="text-xs text-accent uppercase tracking-widest mb-1">Total Cost</p>
+                  <p className="text-slate-300 font-body">{session.estimated_total_cost || 'Significant'}</p>
                 </div>
               </div>
             </div>
@@ -230,12 +237,12 @@ export default function SessionPage({ params }) {
           <div className="mt-16 text-center">
             <div className="max-w-xl mx-auto space-y-6">
               <div className="h-px w-full bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-              <p className="text-slate-500 text-sm italic">
+              <p className="text-slate-500 font-body text-sm italic">
                 "The first step to uprooting a belief is to see where it was planted."
               </p>
               <button
                 onClick={() => router.push('/interview')}
-                className="px-8 py-3 rounded-xl bg-[#818CF8] text-white font-bold hover:bg-[#818CF8]/80 transition-all shadow-lg shadow-[#818CF8]/20"
+                className="px-8 py-3 rounded-xl bg-accent text-white font-bold hover:bg-accent/80 transition-all shadow-[0_0_15px_rgba(129,140,248,0.3)] hover:shadow-[0_0_25px_rgba(129,140,248,0.5)] transform hover:-translate-y-1"
               >
                 Begin Another Excavation
               </button>
@@ -244,7 +251,7 @@ export default function SessionPage({ params }) {
         </div>
       </main>
 
-      <footer className="p-10 border-t border-white/5 text-center text-slate-600 text-xs relative z-10">
+      <footer className="p-10 border-t border-white/5 text-center text-slate-600 text-xs relative z-10 mt-auto">
         © 2026 MindRoots Introspective Systems. All rights reserved.
       </footer>
     </div>

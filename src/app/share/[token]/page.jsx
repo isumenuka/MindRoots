@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { getShareData, getSession, getBeliefs, db, doc, getDoc } from '@/services/FirebaseService'
 import BeliefCard from '@/components/BeliefCard'
 import AudioPlayer from '@/components/AudioPlayer'
@@ -38,10 +39,10 @@ export default function SharePage({ params }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0A0A0A] flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-8 h-8 border-2 border-[#818CF8] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-slate-500 text-sm">Loading shared session...</p>
+      <div className="min-h-screen bg-background-light dark:bg-background-dark flex items-center justify-center">
+        <div className="text-center flex flex-col items-center">
+          <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin mb-6" />
+          <p className="text-text-muted font-display tracking-widest uppercase text-sm">Loading shared session</p>
         </div>
       </div>
     )
@@ -49,12 +50,12 @@ export default function SharePage({ params }) {
 
   if (notFound) {
     return (
-      <div className="min-h-screen bg-[#0A0A0A] flex items-center justify-center text-center px-6">
+      <div className="min-h-screen bg-background-light dark:bg-background-dark flex items-center justify-center text-center px-6">
         <div>
-          <span className="material-symbols-outlined text-5xl text-slate-700 mb-4 block">link_off</span>
-          <h2 className="font-display text-2xl font-bold text-white mb-2">Link not found</h2>
-          <p className="text-slate-500 mb-6">This shared session link may have expired or been deleted.</p>
-          <button onClick={() => router.push('/')} className="px-6 py-3 bg-[#818CF8] text-white rounded-xl font-semibold">Go to MindRoots</button>
+          <span className="material-symbols-outlined text-6xl text-text-muted mb-6 block">link_off</span>
+          <h2 className="font-display text-3xl font-bold text-slate-100 mb-3">Link Expired or Invalid</h2>
+          <p className="text-text-muted mb-8 max-w-md mx-auto">This shared session link may have expired, been revoked, or deleted by the owner.</p>
+          <button onClick={() => router.push('/')} className="px-8 py-3 bg-primary text-background-dark rounded-xl font-display font-bold hover:scale-105 transition-transform shadow-lg shadow-primary/20">Go to MindRoots</button>
         </div>
       </div>
     )
@@ -64,74 +65,73 @@ export default function SharePage({ params }) {
   const sessionDate = session?.created_at?.toDate?.()?.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) || 'Session'
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A] text-white">
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-0 left-0 w-[50%] h-[30%] bg-[#818CF8]/4 blur-[120px]" />
-      </div>
-
+    <div className="min-h-screen bg-background-light dark:bg-background-dark font-sans text-text-muted pb-24">
       {/* Shared badge header */}
-      <header className="relative z-10 flex items-center justify-between border-b border-white/5 px-4 py-4 sm:px-6 lg:px-16">
-        <div className="flex items-center gap-2 sm:gap-3">
-          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-[#818CF8] rounded-lg flex items-center justify-center">
-            <span className="material-symbols-outlined text-white text-[18px] sm:text-lg">psychology</span>
+      <header className="h-20 flex items-center justify-between px-6 lg:px-12 border-b border-border-muted/50 sticky top-0 bg-background-dark/80 backdrop-blur-md z-10 w-full">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-primary rounded-lg flex items-center justify-center">
+            <span className="material-symbols-outlined text-background-dark text-[18px] sm:text-lg font-bold">psychology_alt</span>
           </div>
-          <h1 className="font-display text-lg sm:text-xl font-bold text-white hidden sm:block">MindRoots</h1>
+          <h1 className="font-display text-lg sm:text-xl font-bold text-slate-100 hidden sm:block tracking-tight">MindRoots</h1>
         </div>
-        <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10">
-          <span className="material-symbols-outlined text-slate-400 text-[14px]">visibility</span>
-          <span className="text-xs text-slate-500 font-medium">Read-only view</span>
+        
+        <div className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-border-muted">
+          <span className="material-symbols-outlined text-accent text-[16px]">visibility</span>
+          <span className="text-xs text-text-muted font-display font-medium tracking-wide">READ-ONLY VIEW</span>
         </div>
+        
         <button
           onClick={() => router.push('/')}
-          className="px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-semibold bg-white text-black rounded-xl hover:bg-slate-100 transition-all"
+          className="px-5 py-2.5 text-xs sm:text-sm font-display font-bold bg-white text-background-dark rounded-xl hover:bg-slate-200 transition-all shadow-lg shadow-white/10"
         >
           Create my own
         </button>
       </header>
 
-      <main className="relative z-10 max-w-[960px] mx-auto px-6 lg:px-10 py-8">
+      <main className="max-w-4xl mx-auto px-6 py-12">
         {/* Session hero */}
-        <div className="mb-10">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#818CF8]/10 border border-[#818CF8]/20 mb-4">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#818CF8] animate-pulse" />
-            <span className="text-xs font-medium text-[#818CF8] uppercase tracking-wider">Shared Session</span>
+        <div className="mb-12 text-center">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 mb-6">
+            <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+            <span className="text-xs font-display font-bold text-primary uppercase tracking-widest">Shared Session</span>
           </div>
-          <h2 className="text-3xl lg:text-4xl font-display font-bold text-white mb-2">{dominantTheme}</h2>
-          <p className="text-slate-500">
-            {sessionDate}
-            <span className="mx-2 opacity-30">•</span>
-            {beliefs.length} Core Belief{beliefs.length !== 1 ? 's' : ''}
+          <h2 className="text-4xl lg:text-5xl font-display font-bold text-slate-100 mb-4 tracking-tight">{dominantTheme}</h2>
+          <p className="text-text-muted font-light flex justify-center items-center gap-3">
+            <span>{sessionDate}</span>
+            <span className="w-1 h-1 rounded-full bg-border-muted" />
+            <span>{beliefs.length} Core Belief{beliefs.length !== 1 ? 's' : ''}</span>
           </p>
         </div>
 
         {/* Audio player */}
         {session?.narration_url && (
-          <div className="mb-8 glass-card rounded-xl p-3 flex items-center gap-4">
-            <AudioPlayer src={session.narration_url} title="Session Narration" />
-          </div>
+            <div className="mb-12">
+                <AudioPlayer src={session.narration_url} title="Session Narration" />
+            </div>
         )}
 
         {/* Belief Cards */}
-        <div className="space-y-8">
+        <div className="space-y-12">
           {beliefs.map((node, i) => (
             <BeliefCard key={i} node={node} index={i} />
           ))}
         </div>
 
         {/* Footer CTA */}
-        <div className="mt-16 text-center">
-          <div className="max-w-xl mx-auto space-y-6">
-            <div className="h-px w-full bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-            <p className="text-slate-500 text-sm italic">
-              "The first step to uprooting a belief is to see where it was planted."
-            </p>
-            <button
-              onClick={() => router.push('/')}
-              className="px-8 py-3 rounded-xl bg-[#818CF8] text-white font-bold hover:bg-[#818CF8]/80 transition-all shadow-lg shadow-[#818CF8]/20"
-            >
-              Begin My Own Excavation
-            </button>
-          </div>
+        <div className="mt-24 pt-12 border-t border-border-muted text-center relative overflow-hidden rounded-3xl p-12 bg-white/[0.02]">
+           <div className="absolute inset-0 border border-white/5 rounded-3xl mix-blend-overlay"></div>
+            <div className="relative z-10 max-w-xl mx-auto space-y-6">
+                <span className="material-symbols-outlined text-4xl text-accent/50 mb-2">auto_awesome</span>
+                <p className="text-slate-300 text-lg font-light italic font-display">
+                "The first step to uprooting a belief is to see where it was planted."
+                </p>
+                <button
+                onClick={() => router.push('/')}
+                className="mt-6 px-8 py-4 rounded-xl bg-gradient-to-r from-primary to-accent text-background-dark font-display font-bold hover:scale-105 transition-transform shadow-xl shadow-primary/20 text-lg"
+                >
+                Begin My Own Excavation
+                </button>
+            </div>
         </div>
       </main>
     </div>

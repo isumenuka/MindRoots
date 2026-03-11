@@ -1,17 +1,13 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { auth, signInWithGoogle, onAuthStateChanged, getUserDoc, markOnboardingComplete } from '@/services/FirebaseService'
-import OnboardingModal from '@/components/OnboardingModal'
+import { auth, signInWithGoogle, onAuthStateChanged, getUserDoc } from '@/services/FirebaseService'
 import useAppStore from '@/store/useAppStore'
 
 export default function LandingPage() {
   const router = useRouter()
   const setUser = useAppStore(s => s.setUser)
-  const setOnboardingComplete = useAppStore(s => s.setOnboardingComplete)
   const [signingIn, setSigningIn] = useState(false)
-  const [showOnboarding, setShowOnboarding] = useState(false)
-  const [pendingUser, setPendingUser] = useState(null)
   const [error, setError] = useState(null)
 
   useEffect(() => {
@@ -20,9 +16,9 @@ export default function LandingPage() {
         setUser(user)
         try {
           const userDoc = await getUserDoc(user.uid)
+          // Ensure they go to full-screen onboarding if not complete
           if (userDoc && !userDoc.onboarding_complete) {
-            setPendingUser(user)
-            setShowOnboarding(true)
+            router.push('/onboarding')
           } else {
             router.push('/interview')
           }
@@ -45,19 +41,8 @@ export default function LandingPage() {
     }
   }
 
-  const handleOnboardingComplete = async () => {
-    setShowOnboarding(false)
-    if (pendingUser) {
-      try { await markOnboardingComplete(pendingUser.uid) } catch {}
-      setOnboardingComplete(true)
-      router.push('/interview')
-    }
-  }
-
   return (
     <>
-      {showOnboarding && <OnboardingModal onComplete={handleOnboardingComplete} />}
-
       {/* Background */}
       <div className="fixed inset-0 bg-[#0A0A0A] -z-10" />
       <div className="fixed inset-0 hero-gradient -z-10 pointer-events-none" />

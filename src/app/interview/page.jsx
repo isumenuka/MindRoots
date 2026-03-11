@@ -158,28 +158,28 @@ export default function InterviewPage() {
   const currentAnalyser = agentStatus === 'speaking' ? getPlayerAnalyser() : getMicAnalyser()
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A] text-white flex flex-col">
+    <div className="min-h-screen bg-[#0A0A0A] text-white flex flex-col font-inter">
       {/* Background glow */}
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#818CF8]/8 rounded-full blur-[140px]" />
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-accent/10 rounded-full blur-[120px]"></div>
       </div>
 
       {/* Header */}
-      <header className="relative z-10 flex items-center justify-between px-4 py-4 sm:px-6 sm:py-6 lg:px-12 border-b border-white/5">
-        <div className="flex items-center gap-2 sm:gap-3">
-          <div className="flex items-center justify-center size-8 sm:size-10 rounded-xl bg-white/5 border border-white/10">
-            <span className="material-symbols-outlined text-[#818CF8] text-[20px] sm:text-[24px]">psychology</span>
+      <header className="relative z-10 flex items-center justify-between px-6 py-6 lg:px-12 border-b border-white/5">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center justify-center size-10 rounded-xl bg-white/5">
+            <span className="material-symbols-outlined text-accent">psychology</span>
           </div>
           <div>
-            <h1 className="font-display text-lg sm:text-xl font-bold tracking-tight text-white hidden sm:block">MindRoots</h1>
+            <h1 className="font-display text-xl font-bold tracking-tight text-white hidden sm:block">MindRoots</h1>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 sm:gap-4">
+        <div className="flex items-center gap-6">
           {/* Belief counter */}
-          <div className="flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 sm:px-4 sm:py-2 bg-white/5 rounded-full border border-white/10">
-            <span className="text-xs sm:text-sm font-medium text-slate-300">
-              🔥 <span className="hidden sm:inline">{beliefs.length} of {MAX_BELIEFS} beliefs excavated</span>
+          <div className="flex items-center gap-2 px-4 py-2 bg-white/5 rounded-full border border-white/10">
+            <span className="text-sm font-medium text-slate-300">
+              🔥 <span className="hidden sm:inline">{beliefs.length} core beliefs excavated</span>
               <span className="inline sm:hidden">{beliefs.length}/{MAX_BELIEFS}</span>
             </span>
           </div>
@@ -187,9 +187,9 @@ export default function InterviewPage() {
           {/* End Session */}
           <button
             onClick={() => setShowEndConfirm(true)}
-            className="flex items-center gap-1 sm:gap-2 px-3 py-1.5 sm:px-5 sm:py-2.5 rounded-xl border border-white/10 hover:bg-white/5 transition-all text-xs sm:text-sm font-semibold text-white/60 hover:text-white"
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-white/10 hover:bg-white/5 transition-all text-sm font-semibold text-white/70 hover:text-white"
           >
-            <span className="material-symbols-outlined text-[18px] sm:text-[20px]">call_end</span>
+            <span className="material-symbols-outlined text-[20px]">call_end</span>
             <span className="hidden sm:inline">End Session</span>
           </button>
         </div>
@@ -199,11 +199,13 @@ export default function InterviewPage() {
       <main className="relative z-10 flex-1 flex flex-col items-center justify-center px-6">
         <div className="flex flex-col items-center gap-8 w-full">
           {/* Waveform */}
-          <WaveformVisualizer
-            analyser={currentAnalyser}
-            isActive={isCapturing || agentStatus === 'speaking'}
-            color={agentStatus === 'speaking' ? '#818CF8' : '#ffffff'}
-          />
+          <div className="flex items-end justify-center gap-1.5 h-48 w-full max-w-2xl text-accent">
+            <WaveformVisualizer
+              analyser={currentAnalyser}
+              isActive={isCapturing || agentStatus === 'speaking'}
+              color={agentStatus === 'speaking' ? '#818CF8' : '#ffffff'}
+            />
+          </div>
 
           {/* Status text */}
           <div className="text-center">
@@ -215,82 +217,77 @@ export default function InterviewPage() {
             <p className="font-display text-2xl md:text-3xl font-medium text-white max-w-2xl leading-relaxed">
               {statusLabels[agentStatus] || 'Ready'}
             </p>
-            <p className="text-slate-500 mt-2 text-sm">
+            <p className="text-slate-400 mt-2 text-sm">
               {agentStatus === 'connecting' ? 'Establishing secure session...' : 'MindRoots is analyzing the patterns in your narrative.'}
             </p>
-          </div>
-
-          {/* Status indicator dot */}
-          <div className="flex items-center gap-2">
-            <div className={`w-2 h-2 rounded-full ${
-              agentStatus === 'speaking' ? 'bg-[#818CF8] animate-pulse' :
-              agentStatus === 'listening' ? 'bg-green-400 animate-pulse' :
-              agentStatus === 'active' ? 'bg-white/40' :
-              'bg-white/20'
-            }`} />
-            <span className="text-xs text-slate-500 uppercase tracking-widest">
-              {agentStatus === 'speaking' ? 'Agent speaking' : agentStatus === 'listening' ? 'Listening' : 'Ready'}
-            </span>
           </div>
         </div>
       </main>
 
       {/* Transcript Panel */}
-      <section className="relative z-10 px-6 lg:px-8 max-w-5xl mx-auto w-full mb-4">
-        <button
-          onClick={() => setShowTranscript(!showTranscript)}
-          className="flex items-center gap-2 text-xs text-slate-500 hover:text-white transition-colors mb-3"
-        >
-          <span className="material-symbols-outlined text-base">
-            {showTranscript ? 'expand_less' : 'expand_more'}
-          </span>
-          {showTranscript ? 'Hide transcript' : 'Show transcript'}
-        </button>
-
-        {showTranscript && (
-          <div
-            ref={(el) => { transcriptScrollRef.current = el }}
-            className="frosted-glass rounded-xl p-4 sm:p-6 max-h-[200px] sm:max-h-[280px] overflow-y-auto flex flex-col gap-4 sm:gap-6"
-          >
-            {transcript.length === 0 ? (
-              <p className="text-slate-500 text-sm italic">Conversation will appear here...</p>
-            ) : (
-              transcript.map((entry, i) => (
-                <div key={i} className={`flex gap-4 max-w-3xl ${entry.role === 'user' ? 'ml-auto flex-row-reverse' : ''}`}>
-                  <div className={`flex-shrink-0 size-8 rounded-full flex items-center justify-center border ${
-                    entry.role === 'assistant'
-                      ? 'bg-[#818CF8]/20 border-[#818CF8]/30'
-                      : 'bg-white/10 border-white/20'
-                  }`}>
-                    <span className="material-symbols-outlined text-[16px] text-[#818CF8]">
-                      {entry.role === 'assistant' ? 'smart_toy' : 'person'}
-                    </span>
-                  </div>
-                  <div className={`flex flex-col gap-1 ${entry.role === 'user' ? 'items-end' : ''}`}>
-                    <span className="text-[10px] uppercase tracking-widest font-bold text-[#818CF8]">
-                      {entry.role === 'assistant' ? 'Agent' : 'You'}
-                    </span>
-                    <p className={`text-[15px] leading-relaxed ${entry.role === 'user' ? 'text-right text-white' : 'text-slate-200'}`}>
-                      {entry.text}
-                    </p>
-                  </div>
+      <section className="relative z-10 p-6 lg:p-8 max-w-5xl mx-auto w-full mb-8">
+        <div ref={(el) => { transcriptScrollRef.current = el }} className="frosted-glass rounded-xl p-6 lg:p-8 max-h-[300px] overflow-y-auto flex flex-col gap-8 custom-scrollbar">
+          {transcript.length === 0 ? (
+            <p className="text-slate-500 text-sm italic text-center py-4">Conversation will appear here...</p>
+          ) : (
+            transcript.map((entry, i) => (
+              <div key={i} className={`flex gap-4 max-w-3xl ${entry.role === 'user' ? 'ml-auto flex-row-reverse' : ''}`}>
+                <div className={`flex-shrink-0 size-10 rounded-full flex items-center justify-center border ${
+                  entry.role === 'assistant'
+                    ? 'bg-accent/20 border-accent/30 text-accent'
+                    : 'bg-white/10 border-white/20'
+                }`}>
+                  <span className="material-symbols-outlined text-[20px]">
+                    {entry.role === 'assistant' ? 'smart_toy' : 'person'}
+                  </span>
                 </div>
-              ))
-            )}
-          </div>
-        )}
+                <div className={`flex flex-col gap-2 ${entry.role === 'user' ? 'items-end' : ''}`}>
+                  <span className={`text-[11px] uppercase tracking-widest font-bold ${entry.role === 'assistant' ? 'text-accent' : 'text-slate-500'}`}>
+                    {entry.role === 'assistant' ? 'Agent' : 'You'}
+                  </span>
+                  <p className={`text-[17px] leading-relaxed ${entry.role === 'user' ? 'text-right text-white' : 'text-slate-200'}`}>
+                    {entry.text}
+                  </p>
+                </div>
+              </div>
+            ))
+          )}
+          {agentStatus === 'speaking' && (
+            <div className="flex gap-4 max-w-3xl">
+              <div className="flex-shrink-0 size-10 rounded-full bg-accent/20 flex items-center justify-center border border-accent/30">
+                <span className="material-symbols-outlined text-accent text-[20px]">smart_toy</span>
+              </div>
+              <div className="flex flex-col gap-2">
+                <span className="text-[11px] uppercase tracking-widest font-bold text-accent">Agent</span>
+                <div className="flex gap-1.5 items-center mt-1">
+                  <div className="size-1.5 rounded-full bg-accent/60 animate-pulse"></div>
+                  <div className="size-1.5 rounded-full bg-accent/60 animate-pulse delay-75"></div>
+                  <div className="size-1.5 rounded-full bg-accent/60 animate-pulse delay-150"></div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       </section>
 
       {/* Footer mic controls */}
-      <footer className="relative z-10 flex items-center justify-center pb-8 px-6 gap-4">
-        <button
-          onClick={() => isCapturing ? stopMic() : startMic((pcm16) => liveServiceRef.current?.sendAudio(pcm16))}
-          className={`size-14 rounded-full flex items-center justify-center hover:scale-105 transition-transform shadow-lg ${
-            isCapturing ? 'bg-white text-black shadow-white/20' : 'bg-white/10 border border-white/20 text-white'
-          }`}
-        >
-          <span className="material-symbols-outlined">{isCapturing ? 'mic' : 'mic_off'}</span>
-        </button>
+      <footer className="relative z-10 flex items-center justify-center pb-8 px-6">
+        <div className="flex gap-4">
+          <button
+            onClick={() => isCapturing ? stopMic() : startMic((pcm16) => liveServiceRef.current?.sendAudio(pcm16))}
+            className={`size-14 rounded-full flex items-center justify-center hover:scale-105 transition-transform ${
+              isCapturing ? 'bg-white text-background-dark' : 'bg-white/5 border border-white/10 text-white hover:bg-white/10'
+            }`}
+          >
+            <span className="material-symbols-outlined font-bold">{isCapturing ? 'mic' : 'mic_off'}</span>
+          </button>
+          <button className="size-14 bg-white/5 border border-white/10 text-white rounded-full flex items-center justify-center hover:bg-white/10 transition-colors">
+            <span className="material-symbols-outlined">pause</span>
+          </button>
+          <button className="size-14 bg-white/5 border border-white/10 text-white rounded-full flex items-center justify-center hover:bg-white/10 transition-colors">
+            <span className="material-symbols-outlined">edit</span>
+          </button>
+        </div>
       </footer>
 
       {/* End Session Confirm Modal */}

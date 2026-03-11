@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { auth, onAuthStateChanged, signOut, deleteAllUserData, getUserDoc } from '@/services/FirebaseService'
 import useAppStore from '@/store/useAppStore'
 
@@ -48,128 +49,197 @@ export default function SettingsPage() {
     }
   }
 
+  if (!user) return null;
+
   return (
-    <div className="min-h-screen bg-[#0A0A0A] text-white">
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute bottom-0 left-0 w-[40%] h-[30%] bg-[#818CF8]/4 blur-[120px]" />
-      </div>
-
-      {/* Header */}
-      <header className="relative z-10 flex items-center justify-between border-b border-white/5 px-4 py-4 sm:px-6 sm:py-5 lg:px-16">
-        <button onClick={() => router.back()} className="flex items-center gap-2 sm:gap-3 group">
-          <span className="material-symbols-outlined text-slate-500 group-hover:text-white transition-colors text-[20px] sm:text-[24px]">arrow_back</span>
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 sm:w-8 sm:h-8 bg-[#818CF8] rounded-lg flex items-center justify-center">
-              <span className="material-symbols-outlined text-white text-[16px] sm:text-[18px]">psychology</span>
-            </div>
-            <h1 className="font-display text-base sm:text-lg font-bold text-white">MindRoots</h1>
-          </div>
-        </button>
-        <h2 className="font-display text-base sm:text-lg font-semibold text-slate-400">Settings</h2>
-      </header>
-
-      <main className="relative z-10 max-w-2xl mx-auto px-6 py-12">
-        {/* Account Info */}
-        <section className="mb-8">
-          <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-4">Account</h3>
-          <div className="glass-card rounded-2xl overflow-hidden">
-            <div className="p-6 flex items-center gap-4 border-b border-white/5">
-              {user?.photoURL ? (
-                <img src={user.photoURL} alt={user.displayName} className="w-12 h-12 rounded-full border border-white/20" />
-              ) : (
-                <div className="w-12 h-12 rounded-full bg-[#818CF8]/20 border border-[#818CF8]/30 flex items-center justify-center">
-                  <span className="material-symbols-outlined text-[#818CF8]">person</span>
-                </div>
-              )}
-              <div>
-                <p className="font-semibold text-white">{user?.displayName || 'User'}</p>
-                <p className="text-sm text-slate-500">{user?.email}</p>
+    <div className="relative flex h-screen w-full overflow-hidden bg-background-light dark:bg-background-dark font-sans text-text-muted">
+      {/* Sidebar */}
+      <aside className="hidden md:flex w-72 flex-col border-r border-border-muted bg-background-light dark:bg-background-dark h-full">
+        <div className="p-8 flex items-center gap-3">
+          <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+                <span className="material-symbols-outlined text-background-dark font-bold text-xl">psychology_alt</span>
               </div>
-            </div>
-            <div className="p-4 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-0">
-              <div>
-                <p className="text-sm font-medium text-slate-300">Member since</p>
-                <p className="text-xs text-slate-600">
-                  {userDoc?.created_at?.toDate?.()?.toLocaleDateString() || '—'}
-                </p>
-              </div>
-              <div className="hidden sm:block w-px h-8 bg-white/5" />
-              <div className="sm:text-right">
-                <p className="text-sm font-medium text-slate-300">Data storage</p>
-                <p className="text-xs text-slate-600">Firebase / GCS — your account only</p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Privacy */}
-        <section className="mb-8">
-          <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-4">Privacy</h3>
-          <div className="glass-card rounded-2xl overflow-hidden">
-            {[
-              { icon: 'shield_person', title: 'Your data stays private', desc: 'No other users can access your beliefs or sessions.' },
-              { icon: 'link_off', title: 'Links expire', desc: 'Shared session links can be revoked at any time.' },
-              { icon: 'no_photography', title: 'Person generation disabled', desc: 'All AI illustrations are generated without any human faces.' },
-            ].map((item, i) => (
-              <div key={i} className={`flex items-center gap-4 p-5 ${i < 2 ? 'border-b border-white/5' : ''}`}>
-                <div className="w-9 h-9 rounded-xl bg-[#818CF8]/15 border border-[#818CF8]/20 flex items-center justify-center flex-shrink-0">
-                  <span className="material-symbols-outlined text-[#818CF8] text-lg">{item.icon}</span>
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-white">{item.title}</p>
-                  <p className="text-xs text-slate-500 mt-0.5">{item.desc}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* Actions */}
-        <section className="space-y-3">
-          <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-4">Actions</h3>
-
-          <button
+              <h2 className="font-display text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100">MindRoots</h2>
+          </Link>
+        </div>
+        
+        <nav className="flex-1 px-4 space-y-2 mt-4">
+          <Link href="/history" className="flex items-center gap-4 px-4 py-3 rounded-lg text-text-muted hover:bg-white/5 hover:text-slate-100 transition-all group">
+            <span className="material-symbols-outlined text-[22px]">history</span>
+            <span className="font-display font-medium">History</span>
+          </Link>
+          <Link href="/settings" className="flex items-center gap-4 px-4 py-3 rounded-lg bg-primary/10 text-primary transition-all group">
+            <span className="material-symbols-outlined text-[22px]">person</span>
+            <span className="font-display font-medium">Profile</span>
+          </Link>
+          <a className="flex items-center gap-4 px-4 py-3 rounded-lg text-text-muted hover:bg-white/5 hover:text-slate-100 transition-all group" href="#">
+            <span className="material-symbols-outlined text-[22px]">shield_lock</span>
+            <span className="font-display font-medium">Privacy</span>
+          </a>
+          <a className="flex items-center gap-4 px-4 py-3 rounded-lg text-text-muted hover:bg-white/5 hover:text-slate-100 transition-all group" href="#">
+            <span className="material-symbols-outlined text-[22px]">credit_card</span>
+            <span className="font-display font-medium">Billing</span>
+          </a>
+        </nav>
+        
+        <div className="p-4 border-t border-border-muted">
+          <button 
             onClick={handleSignOut}
             disabled={signingOut}
-            className="w-full flex items-center gap-3 p-4 rounded-xl border border-white/10 bg-white/3 hover:bg-white/8 transition-all text-left group"
+            className="w-full flex items-center gap-4 px-4 py-3 rounded-lg text-text-muted hover:text-danger transition-colors group"
           >
-            <span className="material-symbols-outlined text-slate-400 group-hover:text-white transition-colors">logout</span>
-            <div>
-              <p className="text-sm font-semibold text-white">{signingOut ? 'Signing out...' : 'Sign out'}</p>
-              <p className="text-xs text-slate-500">You can sign back in with Google at any time.</p>
-            </div>
+            <span className="material-symbols-outlined text-[22px]">logout</span>
+            <span className="font-display font-medium">{signingOut ? 'Signing out...' : 'Logout'}</span>
           </button>
+        </div>
+      </aside>
 
-          {!deleteConfirm ? (
-            <button
-              onClick={() => setDeleteConfirm(true)}
-              className="w-full flex items-center gap-3 p-4 rounded-xl border border-red-500/20 bg-red-500/5 hover:bg-red-500/10 transition-all text-left group"
-            >
-              <span className="material-symbols-outlined text-red-400">delete_forever</span>
-              <div>
-                <p className="text-sm font-semibold text-red-400">Delete all my data</p>
-                <p className="text-xs text-slate-500">Permanently removes all sessions, beliefs, and media.</p>
+      {/* Main Content */}
+      <main className="flex-1 overflow-y-auto scroll-smooth relative">
+        {/* Mobile Header elements (since sidebar is hidden) */}
+        <header className="md:h-20 flex flex-col md:flex-row md:items-center justify-between p-6 md:px-12 border-b border-border-muted/50 sticky top-0 bg-background-dark/80 backdrop-blur-md z-10">
+          <div className="flex items-center gap-4 mb-4 md:mb-0 md:hidden">
+            <Link href="/" className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+              <span className="material-symbols-outlined text-background-dark font-bold text-xl">psychology_alt</span>
+            </Link>
+            <h2 className="font-display text-xl font-bold tracking-tight text-slate-100">MindRoots</h2>
+          </div>
+          <div className="flex items-center justify-between w-full md:w-auto">
+             <div className="flex items-center gap-2 text-text-muted text-sm uppercase tracking-widest font-medium">
+               <Link href="/history" className="hover:text-slate-200 transition-colors md:hidden">Menu</Link>
+               <span className="material-symbols-outlined text-xs md:hidden">chevron_right</span>
+               <span>Account</span>
+               <span className="material-symbols-outlined text-xs">chevron_right</span>
+               <span className="text-slate-100">Settings</span>
+             </div>
+             <button className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-white/5 transition-colors border border-border-muted hidden md:flex">
+               <span className="material-symbols-outlined text-slate-100">settings</span>
+             </button>
+             {/* Mobile bottom actions inside header just for quick access */}
+             <button onClick={handleSignOut} className="md:hidden text-text-muted hover:text-slate-100">
+               <span className="material-symbols-outlined">logout</span>
+             </button>
+          </div>
+        </header>
+
+        <div className="max-w-3xl mx-auto py-10 md:py-16 px-6 md:px-8 space-y-12">
+          {/* Hero Section */}
+          <section className="flex flex-col sm:flex-row items-start sm:items-center gap-6 sm:gap-8 border-b border-border-muted pb-12">
+            <div className="relative group shrink-0">
+              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-accent to-purple-600 p-[2px]">
+                <div className="w-full h-full rounded-full bg-background-dark flex items-center justify-center overflow-hidden">
+                  {user?.photoURL ? (
+                    <img alt={user?.displayName || "Profile avatar"} className="w-full h-full object-cover opacity-80" src={user.photoURL} />
+                  ) : (
+                    <span className="material-symbols-outlined text-4xl text-text-muted">person</span>
+                  )}
+                </div>
               </div>
-            </button>
-          ) : (
-            <div className="p-5 rounded-xl border border-red-500/30 bg-red-500/10">
-              <p className="text-sm text-red-300 font-semibold mb-2">⚠ This is permanent and cannot be undone.</p>
-              <p className="text-xs text-slate-500 mb-4">All Firestore docs and storage files will be deleted.</p>
-              <div className="flex gap-3">
-                <button onClick={() => setDeleteConfirm(false)} className="flex-1 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-slate-300 hover:text-white transition-colors">
-                  Cancel
-                </button>
-                <button
-                  onClick={handleDeleteAll}
-                  disabled={deleting}
-                  className="flex-1 py-2.5 rounded-xl bg-red-600 text-white text-sm font-bold hover:bg-red-500 transition-colors disabled:opacity-50"
-                >
-                  {deleting ? 'Deleting...' : 'Yes, delete everything'}
-                </button>
+              <button className="absolute bottom-0 right-0 w-8 h-8 bg-primary rounded-full flex items-center justify-center text-background-dark shadow-xl hover:scale-105 transition-transform">
+                <span className="material-symbols-outlined text-sm">edit</span>
+              </button>
+            </div>
+            <div>
+              <h1 className="font-display text-3xl sm:text-4xl font-bold text-slate-100 tracking-tight">{user?.displayName || 'Believer'}</h1>
+              <p className="text-text-muted text-lg font-light tracking-wide mt-1 italic">Archaeologist of the Mind</p>
+            </div>
+          </section>
+
+          {/* Details Section */}
+          <section className="grid gap-8">
+            <div className="flex flex-col gap-2 group">
+              <label className="font-display text-xs font-bold uppercase tracking-widest text-text-muted/60 ml-1">Email address</label>
+              <div className="flex items-center justify-between px-5 py-4 bg-white/5 border border-border-muted rounded-xl">
+                <span className="text-slate-200 truncate">{user?.email}</span>
+                <span className="material-symbols-outlined text-primary cursor-pointer">verified</span>
               </div>
             </div>
-          )}
-        </section>
+            <div className="flex flex-col gap-2">
+              <label className="font-display text-xs font-bold uppercase tracking-widest text-text-muted/60 ml-1">Journey Started</label>
+              <div className="px-5 py-4 bg-white/5 border border-border-muted rounded-xl text-slate-200">
+                {userDoc?.created_at?.toDate?.()?.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) || '—'}
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+              <div className="p-6 border border-border-muted rounded-xl bg-white/[0.02] hover:bg-white/[0.04] transition-colors cursor-pointer">
+                <span className="material-symbols-outlined text-accent mb-3">database</span>
+                <h4 className="font-display text-slate-100 font-medium mb-1">Firestore Storage</h4>
+                <p className="text-xs text-text-muted">Private user data</p>
+              </div>
+              <div className="p-6 border border-border-muted rounded-xl bg-white/[0.02] hover:bg-white/[0.04] transition-colors cursor-pointer">
+                <span className="material-symbols-outlined text-accent mb-3">cloud_done</span>
+                <h4 className="font-display text-slate-100 font-medium mb-1">Privacy Guard</h4>
+                <p className="text-xs text-text-muted">No visual faces generated</p>
+              </div>
+            </div>
+          </section>
+
+          {/* Danger Zone */}
+          <section className="mt-20 pt-12 border-t border-border-muted">
+            <div className="flex items-center gap-2 mb-6 text-danger">
+              <span className="material-symbols-outlined">warning</span>
+              <h3 className="font-display text-lg font-bold tracking-tight">Danger Zone</h3>
+            </div>
+            
+            {!deleteConfirm ? (
+              <div className="p-6 sm:p-8 border border-danger/30 rounded-xl bg-danger/5 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                <div className="max-w-md">
+                  <p className="text-slate-100 font-medium font-display">Account Deletion</p>
+                  <p className="text-text-muted text-sm leading-relaxed mt-1">
+                    Permanently delete your account, wiping all Firestore documents and GCS media. This action is irreversible.
+                  </p>
+                </div>
+                <button 
+                  onClick={() => setDeleteConfirm(true)}
+                  className="whitespace-nowrap px-6 py-3 bg-danger text-slate-100 font-display font-bold rounded-xl hover:bg-red-700 transition-all shadow-lg shadow-danger/20"
+                >
+                  Delete All My Data
+                </button>
+              </div>
+            ) : (
+              <div className="p-6 sm:p-8 border border-danger/50 rounded-xl bg-danger/10 flex flex-col gap-6">
+                 <div>
+                    <p className="text-danger font-medium font-display mb-2 flex items-center gap-2">
+                        <span className="material-symbols-outlined">gpp_bad</span>
+                        ⚠ This is permanent and cannot be undone.
+                    </p>
+                    <p className="text-text-muted text-sm leading-relaxed mt-1 border-l-2 border-danger/30 pl-3">
+                        All your sessions, beliefs, audio narrations, and personal data will be immediately removed from our servers. You will be signed out.
+                    </p>
+                 </div>
+                 <div className="flex flex-col sm:flex-row gap-3">
+                   <button 
+                     onClick={() => setDeleteConfirm(false)} 
+                     className="px-6 py-3 rounded-xl bg-white/5 border border-white/10 text-sm font-bold text-slate-300 hover:text-white transition-colors flex-1"
+                   >
+                     Cancel
+                   </button>
+                   <button
+                     onClick={handleDeleteAll}
+                     disabled={deleting}
+                     className="px-6 py-3 rounded-xl bg-danger text-white text-sm font-bold hover:bg-red-700 transition-colors disabled:opacity-50 flex-1 shadow-lg shadow-danger/20 flex items-center justify-center gap-2"
+                   >
+                     {deleting ? (
+                        <>
+                            <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                            Deleting...
+                        </>
+                     ) : 'Yes, delete everything'}
+                   </button>
+                 </div>
+              </div>
+            )}
+            
+          </section>
+
+          <footer className="pt-20 pb-12 flex justify-center opacity-30">
+            <div className="flex items-center gap-2 grayscale brightness-200">
+              <span className="material-symbols-outlined text-sm">psychology_alt</span>
+              <span className="text-xs font-display font-bold uppercase tracking-[0.2em]">MindRoots Protocol v4.0.2</span>
+            </div>
+          </footer>
+        </div>
       </main>
     </div>
   )
