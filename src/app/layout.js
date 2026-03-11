@@ -1,0 +1,27 @@
+import './globals.css'
+
+export const metadata = {
+  title: 'MindRoots — AI Belief Archaeology',
+  description: 'Excavate the hidden origins of your limiting beliefs through AI-powered voice interviews. Discover your Belief Origin Tree.',
+  keywords: 'belief archaeology, AI therapy, limiting beliefs, cognitive patterns, mindset',
+}
+
+export default function RootLayout({ children }) {
+  return (
+    <html lang="en">
+      <head>
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=optional"
+        />
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=optional"
+        />
+      </head>
+      <body className="bg-[#0A0A0A] text-slate-300 min-h-screen">
+        {children}
+      </body>
+    </html>
+  )
+}
