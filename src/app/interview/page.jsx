@@ -32,7 +32,7 @@ export default function InterviewPage() {
   const sessionCreatedRef = useRef(false)
 
   const { isCapturing, hasPermission, error: micErr, start: startMic, stop: stopMic, getAnalyser: getMicAnalyser } = useMicrophone()
-  const { playChunk, stop: stopPlayer, getAnalyser: getPlayerAnalyser } = useAudioPlayer()
+  const { playChunk, stopPlayback, stop: stopPlayer, getAnalyser: getPlayerAnalyser } = useAudioPlayer()
 
   // Auth guard
   useEffect(() => {
@@ -65,6 +65,11 @@ export default function InterviewPage() {
       svc.onAudioChunk = (chunk) => {
         playChunk(chunk)
         setAgentStatus('speaking')
+      }
+
+      svc.onInterruption = () => {
+        stopPlayback()
+        setAgentStatus('listening')
       }
 
       svc.onTranscript = (entry) => {
@@ -104,10 +109,14 @@ export default function InterviewPage() {
         liveServiceRef.current = svc
         setAgentStatus('active')
 
+        // Prompt the agent to start with its opening greeting immediately
+        await svc.triggerAgentStart()
+
         // Start capturing mic and sending audio
-        await startMic((pcm16) => {
-          svc.sendAudio(pcm16)
-        })
+        await startMic(
+          (pcm16) => svc.sendAudio(pcm16),
+          () => svc.sendAudioStreamEnd()  // flush Gemini VAD on mic stop
+        )
       } catch (err) {
         console.error('[Interview] Failed to start:', err)
         setMicError(err.message)
@@ -144,8 +153,9 @@ export default function InterviewPage() {
   const handleSendText = () => {
     const msg = textInput.trim()
     if (!msg) return
-    addTranscriptEntry({ role: 'user', text: msg })
     setTextInput('')
+    // Actually send to Gemini Live (was missing before!)
+    liveServiceRef.current?.sendText(msg)
     // Show the conversation panel automatically so user sees their message
     setShowTranscript(true)
   }
@@ -315,7 +325,12 @@ export default function InterviewPage() {
         <div className="flex gap-3 items-center">
           {/* Mic */}
           <button
-            onClick={() => isCapturing ? stopMic() : startMic((pcm16) => liveServiceRef.current?.sendAudio(pcm16))}
+            onClick={() => isCapturing
+              ? stopMic()
+              : startMic(
+                  (pcm16) => liveServiceRef.current?.sendAudio(pcm16),
+                  () => liveServiceRef.current?.sendAudioStreamEnd()
+                )}
             className={`size-14 rounded-full flex items-center justify-center hover:scale-105 transition-transform ${
               isCapturing ? 'bg-white text-[#0A0A0A]' : 'bg-white/5 border border-white/10 text-white hover:bg-white/10'
             }`}
