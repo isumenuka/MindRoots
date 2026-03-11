@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { auth, onAuthStateChanged, getSession, getBeliefs, generateShareToken } from '@/services/FirebaseService'
 import BeliefCard from '@/components/BeliefCard'
 import AudioPlayer from '@/components/AudioPlayer'
+import AppLogo from '@/components/AppLogo'
 
 export default function SessionPage({ params }) {
   const router = useRouter()
@@ -115,14 +116,7 @@ export default function SessionPage({ params }) {
 
       {/* Header */}
       <header className="relative z-10 flex items-center justify-between border-b border-white/5 px-6 py-4 lg:px-40">
-        <div className="flex items-center gap-2 sm:gap-3">
-          <button onClick={() => router.push('/')} className="flex items-center gap-2 sm:gap-3 group">
-            <div className="w-8 h-8 sm:w-8 sm:h-8 bg-primary rounded-lg flex items-center justify-center">
-              <span className="material-symbols-outlined text-background-dark text-[18px] sm:text-lg font-bold">psychology</span>
-            </div>
-            <h1 className="font-display text-lg sm:text-xl font-bold text-primary transition-colors hidden sm:block">MindRoots</h1>
-          </button>
-        </div>
+        <AppLogo />
         <div className="flex gap-2 sm:gap-3">
           <button
             onClick={() => router.push('/history')}

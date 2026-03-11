@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { auth, markOnboardingComplete, onAuthStateChanged, getUserDoc } from '@/services/FirebaseService'
 import useAppStore from '@/store/useAppStore'
 import { motion } from 'framer-motion'
+import AppLogo from '@/components/AppLogo'
 
 export default function OnboardingPage() {
   const router = useRouter()
@@ -58,12 +59,7 @@ export default function OnboardingPage() {
         
         <div className="layout-container flex h-full grow flex-col relative z-10">
           <header className="flex items-center justify-between whitespace-nowrap border-b border-white/5 py-4 px-6 md:px-20 lg:px-40">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-background-dark">
-                <span className="material-symbols-outlined text-xl">psychology_alt</span>
-              </div>
-              <h2 className="text-white text-xl font-display font-bold tracking-tight">MindRoots</h2>
-            </div>
+            <AppLogo />
             <button className="flex items-center justify-center rounded-full h-10 w-10 bg-white/5 hover:bg-white/10 transition-colors">
               <span className="material-symbols-outlined text-slate-300">help</span>
             </button>
@@ -134,14 +130,9 @@ export default function OnboardingPage() {
       >
         <div className="layout-container flex h-full grow flex-col relative z-10">
           <header className="flex items-center justify-between border-b border-white/5 px-6 py-4 md:px-20 lg:px-40">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-primary flex items-center justify-center rounded-lg">
-                <span className="material-symbols-outlined text-background-dark text-xl">psychology</span>
-              </div>
-              <h2 className="text-white text-lg font-display font-bold tracking-tight">MindRoots</h2>
-            </div>
+            <AppLogo />
             <div className="flex items-center gap-4">
-              <button className="flex w-10 h-10 items-center justify-center rounded-full bg-surface-dark text-white hover:bg-white/10 transition-colors">
+              <button onClick={() => router.push('/settings')} className="flex w-10 h-10 items-center justify-center rounded-full bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white transition-colors">
                 <span className="material-symbols-outlined">settings</span>
               </button>
             </div>
@@ -228,12 +219,7 @@ export default function OnboardingPage() {
     >
       <div className="layout-container flex h-full grow flex-col relative z-10">
         <header className="flex items-center justify-between px-6 py-6 md:px-20 lg:px-40">
-          <div className="flex items-center gap-2">
-            <div className="text-primary flex items-center">
-              <span className="material-symbols-outlined text-3xl">psychology</span>
-            </div>
-            <h2 className="text-slate-100 font-display text-xl font-bold tracking-tight">MindRoots</h2>
-          </div>
+          <AppLogo />
           <div className="flex items-center gap-2 text-slate-400 text-sm font-medium">
             <span className="w-2 h-2 rounded-full bg-white/20"></span>
             <span className="w-2 h-2 rounded-full bg-white/20"></span>

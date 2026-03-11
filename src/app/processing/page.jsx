@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { auth, onAuthStateChanged } from '@/services/FirebaseService'
 import useFirestoreListener from '@/hooks/useFirestoreListener'
 import ProcessingStages from '@/components/ProcessingStages'
+import AppLogo from '@/components/AppLogo'
 
 const STAGE_MESSAGES = {
   interviewing: 'Securing your excavation results...',
@@ -70,16 +71,19 @@ function ProcessingContent() {
 
       {/* Top Navigation */}
       <header className="relative z-10 flex items-center justify-between px-8 py-6 max-w-7xl mx-auto w-full">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 flex items-center justify-center bg-primary rounded-lg">
-            <span className="material-symbols-outlined text-background-dark text-xl font-bold">auto_awesome</span>
-          </div>
-          <h1 className="font-display text-primary text-xl font-semibold tracking-tight">MindRoots</h1>
-        </div>
+        <AppLogo />
         <div className="flex items-center gap-6">
           <button
+            onClick={() => router.push('/history')}
+            className="text-slate-400 hover:text-white transition-colors"
+            title="View history"
+          >
+            <span className="material-symbols-outlined">history</span>
+          </button>
+          <button
             onClick={() => router.push('/')}
-            className="text-muted hover:text-primary transition-colors"
+            className="text-slate-400 hover:text-white transition-colors"
+            title="Close"
           >
             <span className="material-symbols-outlined">close</span>
           </button>

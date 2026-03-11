@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { getShareData, getSession, getBeliefs, db, doc, getDoc } from '@/services/FirebaseService'
 import BeliefCard from '@/components/BeliefCard'
 import AudioPlayer from '@/components/AudioPlayer'
+import AppLogo from '@/components/AppLogo'
 
 export default function SharePage({ params }) {
   const router = useRouter()
@@ -68,12 +69,7 @@ export default function SharePage({ params }) {
     <div className="min-h-screen bg-background-light dark:bg-background-dark font-sans text-text-muted pb-24">
       {/* Shared badge header */}
       <header className="h-20 flex items-center justify-between px-6 lg:px-12 border-b border-border-muted/50 sticky top-0 bg-background-dark/80 backdrop-blur-md z-10 w-full">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-primary rounded-lg flex items-center justify-center">
-            <span className="material-symbols-outlined text-background-dark text-[18px] sm:text-lg font-bold">psychology_alt</span>
-          </div>
-          <h1 className="font-display text-lg sm:text-xl font-bold text-slate-100 hidden sm:block tracking-tight">MindRoots</h1>
-        </div>
+        <AppLogo />
         
         <div className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-border-muted">
           <span className="material-symbols-outlined text-accent text-[16px]">visibility</span>

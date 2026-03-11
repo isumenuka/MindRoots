@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { auth, signInWithGoogle, onAuthStateChanged, getUserDoc } from '@/services/FirebaseService'
 import useAppStore from '@/store/useAppStore'
+import AppLogo from '@/components/AppLogo'
 
 export default function LandingPage() {
   const router = useRouter()
@@ -67,12 +68,7 @@ export default function LandingPage() {
       {/* Nav */}
       <nav className="fixed top-0 w-full z-50 border-b border-white/5 bg-[#0A0A0A]/80 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 sm:h-20 py-4 sm:py-5 flex items-center justify-between">
-          <div className="flex items-center gap-2 sm:gap-2.5">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-[#818CF8] rounded-xl flex items-center justify-center shadow-[0_0_20px_rgba(129,140,248,0.4)]">
-              <span className="material-symbols-outlined text-white text-lg sm:text-xl">psychology</span>
-            </div>
-            <span className="text-lg sm:text-xl font-display font-bold tracking-tight text-white">MindRoots</span>
-          </div>
+          <AppLogo />
           <div className="flex items-center gap-3 sm:gap-4">
             {user ? (
               <div className="flex items-center gap-4">

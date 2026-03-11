@@ -8,6 +8,7 @@ import useAudioPlayer from '@/hooks/useAudioPlayer'
 import WaveformVisualizer from '@/components/WaveformVisualizer'
 import useAppStore from '@/store/useAppStore'
 import { sanitizeBeliefNode } from '@/utils/sanitize'
+import AppLogo from '@/components/AppLogo'
 
 const MAX_BELIEFS = 5
 
@@ -165,15 +166,8 @@ export default function InterviewPage() {
       </div>
 
       {/* Header */}
-      <header className="relative z-10 flex items-center justify-between px-6 py-6 lg:px-12 border-b border-white/5">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center justify-center size-10 rounded-xl bg-white/5">
-            <span className="material-symbols-outlined text-accent">psychology</span>
-          </div>
-          <div>
-            <h1 className="font-display text-xl font-bold tracking-tight text-white hidden sm:block">MindRoots</h1>
-          </div>
-        </div>
+      <header className="relative z-10 flex items-center justify-between px-6 py-4 lg:px-12 border-b border-white/5">
+        <AppLogo />
 
         <div className="flex items-center gap-6">
           {/* Belief counter */}

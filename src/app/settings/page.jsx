@@ -1,12 +1,13 @@
 'use client'
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import Link from 'next/link'
+import { useEffect, useState, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { auth, onAuthStateChanged, signOut, deleteAllUserData, getUserDoc } from '@/services/FirebaseService'
 import useAppStore from '@/store/useAppStore'
+import AppSidebar from '@/components/AppSidebar'
 
-export default function SettingsPage() {
+function SettingsInner() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const storeSetUser = useAppStore(s => s.setUser)
   const [user, setUser] = useState(null)
   const [userDoc, setUserDoc] = useState(null)
@@ -14,6 +15,12 @@ export default function SettingsPage() {
   const [deleting, setDeleting] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState(false)
   const [signingOut, setSigningOut] = useState(false)
+
+  // Support ?tab=privacy deep-link from sidebar
+  useEffect(() => {
+    const tab = searchParams.get('tab')
+    if (tab === 'privacy' || tab === 'profile') setActiveTab(tab)
+  }, [searchParams])
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
@@ -53,255 +60,212 @@ export default function SettingsPage() {
   if (!user) return null;
 
   return (
-    <div className="relative flex h-screen w-full overflow-hidden bg-background-light dark:bg-background-dark font-sans text-text-muted">
-      {/* Sidebar */}
-      <aside className="hidden md:flex w-72 flex-col border-r border-border-muted bg-background-light dark:bg-background-dark h-full">
-        <div className="p-8 flex items-center gap-3">
-          <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                <span className="material-symbols-outlined text-background-dark font-bold text-xl">psychology_alt</span>
-              </div>
-              <h2 className="font-display text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100">MindRoots</h2>
-          </Link>
-        </div>
-        
-        <nav className="flex-1 px-4 space-y-2 mt-4">
-          <Link href="/history" className="flex items-center gap-4 px-4 py-3 rounded-lg text-text-muted hover:bg-white/5 hover:text-slate-100 transition-all group">
-            <span className="material-symbols-outlined text-[22px]">history</span>
-            <span className="font-display font-medium">History</span>
-          </Link>
-          <button onClick={() => setActiveTab('profile')} className={`w-full flex items-center gap-4 px-4 py-3 rounded-lg transition-all group ${activeTab === 'profile' ? 'bg-primary/10 text-primary' : 'text-text-muted hover:bg-white/5 hover:text-slate-100'}`}>
-            <span className="material-symbols-outlined text-[22px]">person</span>
-            <span className="font-display font-medium">Profile</span>
-          </button>
-          <button onClick={() => setActiveTab('privacy')} className={`w-full flex items-center gap-4 px-4 py-3 rounded-lg transition-all group ${activeTab === 'privacy' ? 'bg-primary/10 text-primary' : 'text-text-muted hover:bg-white/5 hover:text-slate-100'}`}>
-            <span className="material-symbols-outlined text-[22px]">shield_lock</span>
-            <span className="font-display font-medium">Privacy</span>
-          </button>
-          <button onClick={() => setActiveTab('billing')} className={`w-full flex items-center gap-4 px-4 py-3 rounded-lg transition-all group ${activeTab === 'billing' ? 'bg-primary/10 text-primary' : 'text-text-muted hover:bg-white/5 hover:text-slate-100'}`}>
-            <span className="material-symbols-outlined text-[22px]">credit_card</span>
-            <span className="font-display font-medium">Billing</span>
-          </button>
-        </nav>
-        
-        <div className="p-4 border-t border-border-muted">
-          <button 
-            onClick={handleSignOut}
-            disabled={signingOut}
-            className="w-full flex items-center gap-4 px-4 py-3 rounded-lg text-text-muted hover:text-danger transition-colors group"
-          >
-            <span className="material-symbols-outlined text-[22px]">logout</span>
-            <span className="font-display font-medium">{signingOut ? 'Signing out...' : 'Logout'}</span>
-          </button>
-        </div>
-      </aside>
+    <div className="flex h-screen w-full overflow-hidden bg-[#0A0A0A] font-sans relative">
+      {/* Ambient background */}
+      <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-[#818CF8]/5 blur-[140px] rounded-full" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-[#818CF8]/5 blur-[140px] rounded-full" />
+      </div>
+
+      {/* Shared sidebar */}
+      <AppSidebar
+        user={user}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        onSignOut={handleSignOut}
+        signingOut={signingOut}
+      />
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto scroll-smooth relative">
-        {/* Mobile Header elements (since sidebar is hidden) */}
-        <header className="md:h-20 flex flex-col md:flex-row md:items-center justify-between p-6 md:px-12 border-b border-border-muted/50 sticky top-0 bg-background-dark/80 backdrop-blur-md z-10">
-          <div className="flex items-center gap-4 mb-4 md:mb-0 md:hidden">
-            <Link href="/" className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-              <span className="material-symbols-outlined text-background-dark font-bold text-xl">psychology_alt</span>
-            </Link>
-            <h2 className="font-display text-xl font-bold tracking-tight text-slate-100">MindRoots</h2>
+      <main className="flex-1 overflow-y-auto relative z-10">
+        {/* Top bar */}
+        <header className="h-14 flex items-center justify-between px-6 lg:px-10 border-b border-white/5 sticky top-0 bg-[#0A0A0A]/80 backdrop-blur-xl z-20">
+          <div className="flex items-center gap-2 text-xs uppercase tracking-widest font-semibold text-slate-500">
+            <span>Account</span>
+            <span className="material-symbols-outlined text-[14px]">chevron_right</span>
+            <span className="text-slate-200 capitalize">{activeTab}</span>
           </div>
-          <div className="flex items-center justify-between w-full md:w-auto">
-             <div className="flex items-center gap-2 text-text-muted text-sm uppercase tracking-widest font-medium">
-               <Link href="/history" className="hover:text-slate-200 transition-colors md:hidden">Menu</Link>
-               <span className="material-symbols-outlined text-xs md:hidden">chevron_right</span>
-               <span>Account</span>
-               <span className="material-symbols-outlined text-xs">chevron_right</span>
-               <span className="text-slate-100 capitalize">{activeTab}</span>
-             </div>
-             <button className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-white/5 transition-colors border border-border-muted hidden md:flex">
-               <span className="material-symbols-outlined text-slate-100">settings</span>
-             </button>
-             {/* Mobile bottom actions inside header just for quick access */}
-             <button onClick={handleSignOut} className="md:hidden text-text-muted hover:text-slate-100">
-               <span className="material-symbols-outlined">logout</span>
-             </button>
+          {/* Mobile tab switcher */}
+          <div className="flex md:hidden gap-2">
+            <button
+              onClick={() => setActiveTab('profile')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${activeTab === 'profile' ? 'bg-[#818CF8]/20 text-[#818CF8]' : 'text-slate-500 hover:text-slate-300'}`}
+            >
+              Profile
+            </button>
+            <button
+              onClick={() => setActiveTab('privacy')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${activeTab === 'privacy' ? 'bg-[#818CF8]/20 text-[#818CF8]' : 'text-slate-500 hover:text-slate-300'}`}
+            >
+              Privacy
+            </button>
           </div>
         </header>
 
-        <div className="max-w-3xl mx-auto py-10 md:py-16 px-6 md:px-8 space-y-12">
+        <div className="max-w-2xl mx-auto py-10 px-6 lg:px-8">
+
+          {/* ── PROFILE TAB ── */}
           {activeTab === 'profile' && (
-            <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <section className="flex flex-col sm:flex-row items-start sm:items-center gap-6 sm:gap-8 border-b border-border-muted pb-12">
-            <div className="relative group shrink-0">
-              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-accent to-purple-600 p-[2px]">
-                <div className="w-full h-full rounded-full bg-background-dark flex items-center justify-center overflow-hidden">
-                  {user?.photoURL ? (
-                    <img alt={user?.displayName || "Profile avatar"} className="w-full h-full object-cover opacity-80" src={user.photoURL} referrerPolicy="no-referrer" />
-                  ) : (
-                    <span className="material-symbols-outlined text-4xl text-text-muted">person</span>
-                  )}
-                </div>
-              </div>
-              <button className="absolute bottom-0 right-0 w-8 h-8 bg-primary rounded-full flex items-center justify-center text-background-dark shadow-xl hover:scale-105 transition-transform">
-                <span className="material-symbols-outlined text-sm">edit</span>
-              </button>
-            </div>
-            <div>
-              <h1 className="font-display text-3xl sm:text-4xl font-bold text-slate-100 tracking-tight">{user?.displayName || 'Believer'}</h1>
-              <p className="text-text-muted text-lg font-light tracking-wide mt-1 italic">Archaeologist of the Mind</p>
-            </div>
-          </section>
-
-          {/* Details Section */}
-          <section className="grid gap-8">
-            <div className="flex flex-col gap-2 group">
-              <label className="font-display text-xs font-bold uppercase tracking-widest text-text-muted/60 ml-1">Email address</label>
-              <div className="flex items-center justify-between px-5 py-4 bg-white/5 border border-border-muted rounded-xl">
-                <span className="text-slate-200 truncate">{user?.email}</span>
-                <span className="material-symbols-outlined text-text-muted/50 cursor-pointer hover:text-primary">verified</span>
-              </div>
-            </div>
-            <div className="flex flex-col gap-2">
-              <label className="font-display text-xs font-bold uppercase tracking-widest text-text-muted/60 ml-1">Journey Started</label>
-              <div className="px-5 py-4 bg-white/5 border border-border-muted rounded-xl text-slate-200">
-                {userDoc?.created_at?.toDate?.()?.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) || '—'}
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-              <div className="p-6 border border-border-muted rounded-xl bg-white/[0.02] hover:bg-white/[0.04] transition-colors cursor-pointer">
-                <span className="material-symbols-outlined text-accent mb-3">database</span>
-                <h4 className="font-display text-slate-100 font-medium mb-1">Firestore Stats</h4>
-                <p className="text-xs text-text-muted">142 Belief nodes mapped</p>
-              </div>
-              <div className="p-6 border border-border-muted rounded-xl bg-white/[0.02] hover:bg-white/[0.04] transition-colors cursor-pointer">
-                <span className="material-symbols-outlined text-accent mb-3">cloud_done</span>
-                <h4 className="font-display text-slate-100 font-medium mb-1">GCS Usage</h4>
-                <p className="text-xs text-text-muted">2.4 GB media archived</p>
-              </div>
-            </div>
-          </section>
-
-          {/* Danger Zone */}
-          <section className="mt-20 pt-12 border-t border-border-muted">
-            <div className="flex items-center gap-2 mb-6 text-danger">
-              <span className="material-symbols-outlined">warning</span>
-              <h3 className="font-display text-lg font-bold tracking-tight">Danger Zone</h3>
-            </div>
-            
-            {!deleteConfirm ? (
-              <div className="p-6 sm:p-8 border border-danger/30 rounded-xl bg-danger/5 flex flex-col md:flex-row items-center justify-between gap-6">
-                <div className="max-w-md">
-                  <p className="text-slate-100 font-medium font-display">Account Deletion</p>
-                  <p className="text-text-muted text-sm leading-relaxed mt-1">
-                    Permanently delete your account, wiping all Firestore documents and GCS media. This action is irreversible.
-                  </p>
-                </div>
-                <button 
-                  onClick={() => setDeleteConfirm(true)}
-                  className="whitespace-nowrap px-6 py-3 bg-danger text-slate-100 font-display font-bold rounded-xl hover:bg-red-700 transition-all shadow-lg shadow-danger/20"
-                >
-                  Delete All My Data
-                </button>
-              </div>
-            ) : (
-              <div className="p-6 sm:p-8 border border-danger/50 rounded-xl bg-danger/10 flex flex-col gap-6">
-                 <div>
-                    <p className="text-danger font-medium font-display mb-2 flex items-center gap-2">
-                        <span className="material-symbols-outlined">gpp_bad</span>
-                        ⚠ This is permanent and cannot be undone.
-                    </p>
-                    <p className="text-text-muted text-sm leading-relaxed mt-1 border-l-2 border-danger/30 pl-3">
-                        All your sessions, beliefs, audio narrations, and personal data will be immediately removed from our servers. You will be signed out.
-                    </p>
-                 </div>
-                 <div className="flex flex-col sm:flex-row gap-3">
-                   <button 
-                     onClick={() => setDeleteConfirm(false)} 
-                     className="px-6 py-3 rounded-xl bg-white/5 border border-white/10 text-sm font-bold text-slate-300 hover:text-white transition-colors flex-1"
-                   >
-                     Cancel
-                   </button>
-                   <button
-                     onClick={handleDeleteAll}
-                     disabled={deleting}
-                     className="px-6 py-3 rounded-xl bg-danger text-white text-sm font-bold hover:bg-red-700 transition-colors disabled:opacity-50 flex-1 shadow-lg shadow-danger/20 flex items-center justify-center gap-2"
-                   >
-                     {deleting ? (
-                        <>
-                            <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                            Deleting...
-                        </>
-                     ) : 'Yes, delete everything'}
-                   </button>
-                 </div>
-              </div>
-            )}
-          </section>
-            </div>
-          )}
-
-          {activeTab === 'privacy' && (
-            <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <section className="border-b border-border-muted pb-8">
-                <h1 className="font-display text-3xl sm:text-4xl font-bold text-slate-100 tracking-tight">Privacy & Security</h1>
-                <p className="text-text-muted text-lg mt-2">Manage your data and security preferences.</p>
-              </section>
-              
-              <section className="grid gap-8">
-                <div className="p-6 border border-border-muted rounded-xl bg-white/[0.02]">
-                  <h4 className="font-display text-slate-100 font-medium mb-1">Data Export</h4>
-                  <p className="text-sm text-text-muted mb-4">Download a copy of all your mind maps, insights, and session transcripts.</p>
-                  <button className="px-5 py-2.5 bg-white/10 text-slate-100 font-display font-bold rounded-lg hover:bg-white/20 transition-colors text-sm border border-white/10 hover:border-white/20 shadow-sm">Request Archive</button>
-                </div>
-
-                <div className="p-6 border border-border-muted rounded-xl bg-white/[0.02]">
-                  <h4 className="font-display text-slate-100 font-medium mb-1">Session Anonymity</h4>
-                  <p className="text-sm text-text-muted mb-4">Ensure your AI sessions are not used for global model training.</p>
-                  <div className="flex items-center gap-3">
-                      <div className="w-10 h-6 bg-primary/20 rounded-full relative cursor-pointer border border-primary/50 flex flex-col justify-center">
-                          <div className="w-4 h-4 bg-primary rounded-full absolute right-1"></div>
-                      </div>
-                      <span className="text-slate-300 text-sm font-medium">Opt-out enabled</span>
-                  </div>
-                </div>
-              </section>
-            </div>
-          )}
-
-          {activeTab === 'billing' && (
-            <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <section className="border-b border-border-muted pb-8">
-                <h1 className="font-display text-3xl sm:text-4xl font-bold text-slate-100 tracking-tight">Billing & Plans</h1>
-                <p className="text-text-muted text-lg mt-2">Manage your subscription and billing history.</p>
-              </section>
-
-              <section className="grid gap-6">
-                <div className="p-8 border border-primary/30 rounded-2xl bg-primary/5 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl -mr-10 -mt-10"></div>
-                  <div className="relative z-10">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="px-2.5 py-1 bg-primary/20 text-primary text-xs font-bold uppercase tracking-wider rounded border border-primary/30">Current Plan</span>
+            <div className="space-y-10 animate-in fade-in slide-in-from-bottom-3 duration-300">
+              {/* Avatar + Name */}
+              <div className="flex items-center gap-6">
+                <div className="relative shrink-0">
+                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#818CF8] to-purple-600 p-[2px]">
+                    <div className="w-full h-full rounded-full bg-[#0A0A0A] flex items-center justify-center overflow-hidden">
+                      {user?.photoURL ? (
+                        <img
+                          alt={user?.displayName || 'Avatar'}
+                          className="w-full h-full object-cover"
+                          src={user.photoURL}
+                          referrerPolicy="no-referrer"
+                        />
+                      ) : (
+                        <span className="material-symbols-outlined text-3xl text-slate-500">person</span>
+                      )}
                     </div>
-                    <h2 className="font-display text-3xl font-bold text-slate-100 mb-2">Free Tier</h2>
-                    <p className="text-text-muted max-w-sm">You are currently on the free tier. Upgrade to unlock unlimited voice sessions and advanced belief mapping.</p>
                   </div>
-                  <button className="relative z-10 whitespace-nowrap px-6 py-3 bg-primary text-background-dark font-display font-bold rounded-xl hover:bg-primary/90 transition-all shadow-lg shadow-primary/20">
-                    Upgrade Plan
-                  </button>
+                </div>
+                <div>
+                  <h1 className="font-display text-2xl font-bold text-white tracking-tight">
+                    {user?.displayName || 'Believer'}
+                  </h1>
+                  <p className="text-slate-500 text-sm mt-0.5 italic">Archaeologist of the Mind</p>
+                </div>
+              </div>
+
+              {/* Info fields */}
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs uppercase tracking-widest font-semibold text-slate-500 mb-2">Email</label>
+                  <div className="flex items-center justify-between px-4 py-3 bg-white/5 border border-white/10 rounded-xl">
+                    <span className="text-slate-200 text-sm truncate">{user?.email}</span>
+                    <span className="material-symbols-outlined text-[#818CF8] text-[18px]">verified</span>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs uppercase tracking-widest font-semibold text-slate-500 mb-2">Member Since</label>
+                  <div className="px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-slate-200 text-sm">
+                    {userDoc?.created_at?.toDate?.()?.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) || '—'}
+                  </div>
+                </div>
+              </div>
+
+              {/* Danger Zone */}
+              <div className="pt-8 border-t border-white/5">
+                <div className="flex items-center gap-2 mb-5 text-red-400">
+                  <span className="material-symbols-outlined text-[20px]">warning</span>
+                  <h3 className="font-display text-base font-bold">Danger Zone</h3>
                 </div>
 
-                <h3 className="font-display text-lg font-bold text-slate-100 mt-4 mb-2">Payment Methods</h3>
-                <div className="p-6 border border-border-muted rounded-xl bg-white/[0.02] flex items-center justify-center text-text-muted/50 border-dashed h-32">
-                  No payment methods added.
-                </div>
-              </section>
+                {!deleteConfirm ? (
+                  <div className="p-6 border border-red-400/20 rounded-xl bg-red-400/[0.04] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+                    <div>
+                      <p className="text-slate-100 font-semibold text-sm">Delete Account & All Data</p>
+                      <p className="text-slate-500 text-sm mt-1 leading-relaxed">
+                        Permanently removes all sessions, beliefs, and audio. This cannot be undone.
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setDeleteConfirm(true)}
+                      className="whitespace-nowrap px-5 py-2.5 bg-red-500 text-white text-sm font-bold rounded-xl hover:bg-red-600 transition-colors shadow-lg shadow-red-500/20"
+                    >
+                      Delete All Data
+                    </button>
+                  </div>
+                ) : (
+                  <div className="p-6 border border-red-400/40 rounded-xl bg-red-400/[0.08] space-y-5">
+                    <div>
+                      <p className="text-red-400 font-semibold text-sm flex items-center gap-2 mb-2">
+                        <span className="material-symbols-outlined text-[18px]">gpp_bad</span>
+                        This action is permanent and cannot be undone.
+                      </p>
+                      <p className="text-slate-400 text-sm leading-relaxed border-l-2 border-red-400/30 pl-3">
+                        All your sessions, beliefs, audio narrations, and personal data will be immediately removed. You will be signed out.
+                      </p>
+                    </div>
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => setDeleteConfirm(false)}
+                        className="flex-1 px-5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm font-bold text-slate-300 hover:text-white transition-colors"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleDeleteAll}
+                        disabled={deleting}
+                        className="flex-1 px-5 py-2.5 rounded-xl bg-red-500 text-white text-sm font-bold hover:bg-red-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-red-500/20"
+                      >
+                        {deleting ? (
+                          <>
+                            <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            Deleting…
+                          </>
+                        ) : 'Yes, delete everything'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
-          <footer className="pt-20 pb-12 flex justify-center opacity-30">
-            <div className="flex items-center gap-2 grayscale brightness-200">
-              <span className="material-symbols-outlined text-sm">psychology_alt</span>
-              <span className="text-xs font-display font-bold uppercase tracking-[0.2em]">MindRoots Protocol v4.0.2</span>
+          {/* ── PRIVACY TAB ── */}
+          {activeTab === 'privacy' && (
+            <div className="space-y-10 animate-in fade-in slide-in-from-bottom-3 duration-300">
+              <div className="border-b border-white/5 pb-6">
+                <h1 className="font-display text-3xl font-bold text-white tracking-tight">Privacy & Security</h1>
+                <p className="text-slate-500 mt-2">Manage your data, anonymity, and security preferences.</p>
+              </div>
+
+              <div className="space-y-4">
+                {/* Data Export */}
+                <div className="p-6 border border-white/10 rounded-xl bg-white/[0.02] hover:bg-white/[0.04] transition-colors">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <h4 className="font-display text-slate-100 font-semibold mb-1">Export Your Data</h4>
+                      <p className="text-sm text-slate-500 leading-relaxed">Download a copy of all your sessions, belief maps, and insights as a ZIP archive.</p>
+                    </div>
+                    <button className="shrink-0 px-4 py-2 bg-white/10 text-slate-100 font-semibold text-sm rounded-lg hover:bg-white/20 transition-colors border border-white/10">
+                      Request
+                    </button>
+                  </div>
+                </div>
+
+                {/* Session Anonymity */}
+                <div className="p-6 border border-white/10 rounded-xl bg-white/[0.02] hover:bg-white/[0.04] transition-colors">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <h4 className="font-display text-slate-100 font-semibold mb-1">AI Training Opt-Out</h4>
+                      <p className="text-sm text-slate-500 leading-relaxed">Your sessions are never used to train AI models. This is always enabled.</p>
+                    </div>
+                    <div className="shrink-0 w-11 h-6 bg-[#818CF8]/30 rounded-full relative border border-[#818CF8]/50 flex items-center">
+                      <div className="w-4 h-4 bg-[#818CF8] rounded-full absolute right-1 shadow" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Zero-knowledge */}
+                <div className="p-6 border border-white/10 rounded-xl bg-white/[0.02]">
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="material-symbols-outlined text-[#818CF8] text-[20px]">lock</span>
+                    <h4 className="font-display text-slate-100 font-semibold">End-to-End Encrypted Storage</h4>
+                  </div>
+                  <p className="text-sm text-slate-500 leading-relaxed">All session data is stored with zero-knowledge encryption. Not even MindRoots can read your raw transcripts.</p>
+                </div>
+              </div>
             </div>
-          </footer>
+          )}
+
         </div>
       </main>
     </div>
+  )
+}
+
+export default function SettingsPage() {
+  return (
+    <Suspense fallback={null}>
+      <SettingsInner />
+    </Suspense>
   )
 }

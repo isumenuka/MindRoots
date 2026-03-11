@@ -1,4 +1,5 @@
 import './globals.css'
+import PageTransition from '@/components/PageTransition'
 
 export const metadata = {
   title: 'MindRoots — AI Belief Archaeology',
@@ -20,7 +21,9 @@ export default function RootLayout({ children }) {
         />
       </head>
       <body className="bg-[#0A0A0A] text-slate-300 min-h-screen">
-        {children}
+        <PageTransition>
+          {children}
+        </PageTransition>
       </body>
     </html>
   )
