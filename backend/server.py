@@ -222,45 +222,66 @@ async def gemini_live_proxy(ws: WebSocket):
             # ── Receive Gemini responses and forward to browser ──────────
             async def receive_from_gemini():
                 async for response in gemini_session.receive():
+                    # Debug: print the raw response type
+                    print(f"[Gemini] Response: {type(response).__name__}")
+
+                    # ── Path 1: server_content (most common) ──────────────
                     sc = response.server_content
-                    if sc is None:
-                        continue
+                    if sc is not None:
+                        # Interruption
+                        if sc.interrupted:
+                            print("[Gemini] Interrupted")
+                            await send_json(ws, {"type": "interrupted"})
 
-                    # Interruption
-                    if sc.interrupted:
-                        await send_json(ws, {"type": "interrupted"})
+                        # Turn complete
+                        if sc.turn_complete:
+                            print("[Gemini] Turn complete")
+                            await send_json(ws, {"type": "turn_complete"})
 
-                    # Turn complete
-                    if sc.turn_complete:
-                        await send_json(ws, {"type": "turn_complete"})
+                        # Audio from model_turn parts
+                        if sc.model_turn and sc.model_turn.parts:
+                            for part in sc.model_turn.parts:
+                                print(f"[Gemini] Part type: {type(part).__name__}, has inline_data: {part.inline_data is not None}")
+                                if part.inline_data:
+                                    mime = part.inline_data.mime_type or ""
+                                    data = part.inline_data.data
+                                    print(f"[Gemini] Audio mime={mime} bytes={len(data) if data else 0}")
+                                    if data and (mime.startswith("audio/") or not mime):
+                                        audio_b64 = base64.b64encode(data).decode()
+                                        await send_json(ws, {"type": "audio", "data": audio_b64})
 
-                    # Audio output
-                    if sc.model_turn and sc.model_turn.parts:
-                        for part in sc.model_turn.parts:
-                            if part.inline_data and part.inline_data.mime_type.startswith("audio/"):
-                                audio_b64 = base64.b64encode(part.inline_data.data).decode()
-                                await send_json(ws, {"type": "audio", "data": audio_b64})
+                        # Input (user) transcript
+                        if sc.input_transcription and sc.input_transcription.text:
+                            text = sc.input_transcription.text
+                            print(f"[Gemini] User transcript: {text[:80]}")
+                            await send_json(ws, {"type": "transcript", "role": "user", "text": text})
 
-                    # Input (user) transcript
-                    if sc.input_transcription and sc.input_transcription.text:
-                        text = sc.input_transcription.text
-                        await send_json(ws, {"type": "transcript", "role": "user", "text": text})
+                        # Output (assistant) transcript
+                        if sc.output_transcription and sc.output_transcription.text:
+                            text = sc.output_transcription.text
+                            print(f"[Gemini] AI transcript: {text[:80]}")
+                            await send_json(ws, {"type": "transcript", "role": "assistant", "text": text})
 
-                    # Output (assistant) transcript
-                    if sc.output_transcription and sc.output_transcription.text:
-                        text = sc.output_transcription.text
-                        await send_json(ws, {"type": "transcript", "role": "assistant", "text": text})
+                            # Parse belief nodes from AI text
+                            for node in parse_belief_nodes(text):
+                                print(f"[Proxy] Belief node: {node.get('belief')}")
+                                await send_json(ws, {"type": "belief_node", "node": node})
 
-                        # Parse belief nodes from AI text
-                        for node in parse_belief_nodes(text):
-                            print(f"[Proxy] Belief node: {node.get('belief')}")
-                            await send_json(ws, {"type": "belief_node", "node": node})
+                            # Check for session completion phrase
+                            if COMPLETION_PHRASE in text.lower():
+                                print("[Proxy] Session completion detected")
+                                await asyncio.sleep(1.5)
+                                await send_json(ws, {"type": "complete"})
 
-                        # Check for session completion phrase
-                        if COMPLETION_PHRASE in text.lower():
-                            print("[Proxy] Session completion detected")
-                            await asyncio.sleep(1.5)
-                            await send_json(ws, {"type": "complete"})
+                    # ── Path 2: top-level data (some SDK versions use this) ──
+                    elif hasattr(response, "data") and response.data:
+                        data = response.data
+                        print(f"[Gemini] Top-level audio bytes={len(data)}")
+                        audio_b64 = base64.b64encode(data).decode()
+                        await send_json(ws, {"type": "audio", "data": audio_b64})
+
+                    else:
+                        print(f"[Gemini] Unknown response structure: {response}")
 
             # ── Receive messages from browser and forward to Gemini ──────
             async def receive_from_browser():

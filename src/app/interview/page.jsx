@@ -58,6 +58,9 @@ export default function InterviewPage() {
       setSessionId(sid)
       setIsInterviewing(true)
 
+      // Pre-warm the audio worklet so it doesn't drop the first chunk
+      await initAudioWorklet()
+
       // Initialize Gemini Live
       const svc = new GeminiLiveService()
       svc.init() // API key managed server-side in backend/server.py

@@ -13,7 +13,7 @@ export default function useAudioPlayer() {
   const analyserRef     = useRef(null)
   const initializedRef  = useRef(false)
 
-  const ensureInit = useCallback(async () => {
+  const init = useCallback(async () => {
     if (initializedRef.current) return
     initializedRef.current = true
 
@@ -34,29 +34,30 @@ export default function useAudioPlayer() {
     analyser.connect(ctx.destination)
   }, [])
 
-  const playChunk = useCallback(async (pcm16Bytes) => {
-    // Lazily initialize on first audio chunk
-    if (!initializedRef.current) await ensureInit()
-
+  const playChunk = useCallback((pcm16Bytes) => {
     const ctx = ctxRef.current
-    if (!ctx || !workletNodeRef.current) return
-
-    if (ctx.state === 'suspended') await ctx.resume()
-
-    // Convert PCM16 → Float32 for the worklet
-    const int16   = new Int16Array(
-      pcm16Bytes.buffer ? pcm16Bytes.buffer : pcm16Bytes,
-      pcm16Bytes.byteOffset ?? 0,
-      pcm16Bytes.byteLength ? pcm16Bytes.byteLength / 2 : pcm16Bytes.length
-    )
-    const float32 = new Float32Array(int16.length)
-    for (let i = 0; i < int16.length; i++) {
-      float32[i] = int16[i] / 32768
+    if (!ctx || !workletNodeRef.current) {
+        console.warn('AudioPlayer not initialized, dropping chunk')
+        return
     }
 
-    // Send to worklet — no AudioBufferSourceNode creation, zero scheduling overhead
+    if (ctx.state === 'suspended') ctx.resume()
+
+    // Safely get Int16Array from the incoming Uint8Array
+    // We MUST use slice() to ensure the buffer is byte-aligned and isolated,
+    // otherwise new Int16Array() throws if byteOffset is not a multiple of 2
+    const copy = pcm16Bytes.slice()
+    const int16 = new Int16Array(copy.buffer)
+
+    // Convert PCM16 → Float32 for the worklet
+    const float32 = new Float32Array(int16.length)
+    for (let i = 0; i < int16.length; i++) {
+        float32[i] = int16[i] / 32768
+    }
+
+    // Send to worklet
     workletNodeRef.current.port.postMessage(float32)
-  }, [ensureInit])
+  }, [])
 
   // Instantly clear queued audio (called on Gemini interruption)
   const stopPlayback = useCallback(() => {
@@ -74,5 +75,5 @@ export default function useAudioPlayer() {
 
   const getAnalyser = useCallback(() => analyserRef.current, [])
 
-  return { playChunk, stopPlayback, stop, getAnalyser }
+  return { init, playChunk, stopPlayback, stop, getAnalyser }
 }
