@@ -60,7 +60,7 @@ export default function InterviewPage() {
 
       // Initialize Gemini Live
       const svc = new GeminiLiveService()
-      svc.init(process.env.NEXT_PUBLIC_GEMINI_API_KEY)
+      svc.init() // API key managed server-side in backend/server.py
 
       svc.onAudioChunk = (chunk) => {
         playChunk(chunk)
