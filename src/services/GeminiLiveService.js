@@ -38,8 +38,8 @@ class GeminiLiveService {
         const tokenData = await tokenRes.json()
         const token = tokenData.token
 
-        // 3. Connect to Gemini Live natively
-        const url = `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent?access_token=${token}`
+        // 3. Connect to Gemini Live natively (Must use BidiGenerateContentConstrained with Ephemeral Tokens)
+        const url = `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContentConstrained?access_token=${token}`
         const ws = new WebSocket(url)
         this.ws = ws
 
@@ -140,7 +140,7 @@ class GeminiLiveService {
 
     const setup = {
       setup: {
-        model: `models/${config.model || "gemini-2.0-flash-exp"}`,
+        model: `models/${config.model || "gemini-2.5-flash-native-audio-preview-12-2025"}`,
         generationConfig: {
           responseModalities: ["AUDIO"],
           temperature: config.temperature ?? 1.0,

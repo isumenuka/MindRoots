@@ -58,7 +58,12 @@ export default function useMicrophone(sampleRate = 16000) {
       };
 
       analyserRef.current.connect(processor);
-      processor.connect(audioContextRef.current.destination);
+      // Connect to destination to prevent garbage collection (creates a feedback loop normally,
+      // but we use echo cancellation. A better approach is connecting to a muted gain node)
+      const muteNode = audioContextRef.current.createGain();
+      muteNode.gain.value = 0;
+      processor.connect(muteNode);
+      muteNode.connect(audioContextRef.current.destination);
       processorRef.current = processor;
 
       // Store onStop callback cleanly inside ref

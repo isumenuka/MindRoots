@@ -41,6 +41,17 @@ export default function useAudioPlayer(sampleRate = 24000) {
       gainNodeRef.current.connect(analyserRef.current);
       analyserRef.current.connect(audioContextRef.current.destination);
 
+      const resumeContext = () => {
+        if (audioContextRef.current && audioContextRef.current.state === "suspended") {
+          audioContextRef.current.resume().catch(console.error);
+        }
+      };
+
+      // Ensure we resume on any user interaction across the window
+      window.addEventListener("click", resumeContext, { once: true });
+      window.addEventListener("touchstart", resumeContext, { once: true });
+      window.addEventListener("keydown", resumeContext, { once: true });
+
       isInitializedRef.current = true;
       console.log("🔊 Audio player initialized");
     } catch (error) {
@@ -67,10 +78,13 @@ export default function useAudioPlayer(sampleRate = 24000) {
         await audioContextRef.current.resume();
       }
 
-      // Convert base64 to Float32Array
-      const binaryString = atob(base64Audio);
-      const bytes = new Uint8Array(binaryString.length);
-      for (let i = 0; i < binaryString.length; i++) {
+      // Handle odd length by truncating the last byte if necessary
+      const binaryString = window.atob(base64Audio);
+      const byteLength = binaryString.length;
+      const validByteLength = byteLength % 2 !== 0 ? byteLength - 1 : byteLength;
+      
+      const bytes = new Uint8Array(validByteLength);
+      for (let i = 0; i < validByteLength; i++) {
         bytes[i] = binaryString.charCodeAt(i);
       }
 
