@@ -16,12 +16,14 @@ class GeminiLiveService {
     this.onAudioChunk = null      // cb(base64Audio: string)
     this.onTranscript = null      // cb({ role, text })
     this.onTranscriptChunk = null // cb(text) — streams partial agent text into existing bubble
+    this.onInputTranscriptChunk = null // cb(text) — streams partial user text into existing bubble
     this.onBeliefFound = null     // cb(beliefNode)
     this.onComplete = null        // cb()
     this.onError = null           // cb(error)
     this.onInterruption = null    // cb()
     this.onTurnComplete = null    // cb()
     this._outputTranscriptBuffer = '' // accumulate streaming agent words
+    this._inputTranscriptBuffer  = '' // accumulate streaming user words
   }
 
   // Kept for API compatibility, not used
@@ -84,23 +86,34 @@ class GeminiLiveService {
               }
               this.onTurnComplete?.()
             }
-            // Parse audio
+            // Parse audio — flush user buffer first (model is now responding)
             if (serverContent.modelTurn?.parts) {
+              if (this._inputTranscriptBuffer) {
+                // Commit the full user sentence to fullTranscript (bubble already shown)
+                this.fullTranscript.push({ role: 'user', text: this._inputTranscriptBuffer.trim() })
+                this._inputTranscriptBuffer = ''
+              }
               for (const part of serverContent.modelTurn.parts) {
                 if (part.inlineData?.data) {
-                  // Direct base64 string straight to playback worklet!
                   this.onAudioChunk?.(part.inlineData.data)
                 }
                 if (part.text) {
-                  console.log("Model Text (Non-transcript):", part.text); // Rare in audio mode
+                  console.log("Model Text (Non-transcript):", part.text)
                 }
               }
             }
-            // Parse input transcript
+            // Parse input transcript — buffer chunks into one user bubble per utterance
             if (serverContent.inputTranscription?.text) {
-              const text = serverContent.inputTranscription.text
-              this.fullTranscript.push({ role: 'user', text })
-              this.onTranscript?.({ role: 'user', text })
+              const chunk = serverContent.inputTranscription.text
+              if (!this._inputTranscriptBuffer) {
+                // First chunk: create user bubble
+                this._inputTranscriptBuffer = chunk
+                this.onTranscript?.({ role: 'user', text: chunk })
+              } else {
+                // Subsequent chunks: append to existing bubble
+                this._inputTranscriptBuffer += chunk
+                this.onInputTranscriptChunk?.(chunk)
+              }
             }
             // Parse output transcript — buffer chunks, emit one bubble per turn
             if (serverContent.outputTranscription?.text) {

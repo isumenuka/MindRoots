@@ -93,6 +93,11 @@ export default function InterviewPage() {
         appendLastTranscriptEntry(chunk)
       }
 
+      // Streaming user speech chunks: append into same user bubble
+      svc.onInputTranscriptChunk = (chunk) => {
+        appendLastTranscriptEntry(chunk)
+      }
+
       svc.onTurnComplete = () => {
         setAgentStatus('listening')
       }
