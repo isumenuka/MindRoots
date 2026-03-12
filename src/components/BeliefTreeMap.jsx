@@ -1,6 +1,9 @@
 'use client'
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 
+const NODE_W = 220
+const NODE_H = 100
+const LEVEL_H = 240
 const WEIGHT_COLORS = {
   profound: '#f87171',
   high: '#fb923c',
@@ -8,234 +11,256 @@ const WEIGHT_COLORS = {
   low: '#4ade80',
 }
 
-const Y_START = 120          // root node y
-const NODE_HEIGHT = 140      // vertical gap between levels
-const NODE_W = 200           // node card width
-const NODE_H = 90            // node card height
-const ROOT_W = 240
-const ROOT_H = 60
-
 export default function BeliefTreeMap({ beliefs = [], session = {} }) {
-  const [tooltip, setTooltip] = useState(null)
-  const svgRef = useRef(null)
+  const containerRef = useRef(null)
+  const [transform, setTransform] = useState({ x: 0, y: 0, scale: 0.8 })
+  const [isDragging, setIsDragging] = useState(false)
+  const [lastMouse, setLastMouse] = useState({ x: 0, y: 0 })
+  const [hoveredNode, setHoveredNode] = useState(null)
 
-  const n = beliefs.length
-  if (n === 0) return (
-    <div className="flex items-center justify-center h-64 text-slate-600 text-sm">
-      No beliefs to map yet.
-    </div>
-  )
+  // ── Hierarchical Layout Algorithm ──────────────────────────────────────────
+  // Calculate positions based on depth and sibling index
+  const getLayout = useCallback(() => {
+    const nodeMap = {}
+    beliefs.forEach(b => nodeMap[b.id] = { ...b, children: [] })
 
-  // Layout: root at top-center, beliefs spread below
-  const gapX = Math.max(NODE_W + 30, 900 / (n + 1))
-  const totalW = Math.max(900, n * gapX + 60)
-  const totalH = Y_START + NODE_HEIGHT + NODE_H + 80
+    const roots = []
+    beliefs.forEach(node => {
+      if (node.parent_id && nodeMap[node.parent_id]) {
+        nodeMap[node.parent_id].children.push(node.id)
+      } else {
+        roots.push(node.id)
+      }
+    })
 
-  const rootX = totalW / 2
-  const rootY = Y_START
-  const beliefY = Y_START + NODE_HEIGHT
+    const positions = {}
+    const levelCounts = {}
 
-  const nodePositions = beliefs.map((_, i) => ({
-    x: (i + 1) * (totalW / (n + 1)),
-    y: beliefY,
-  }))
+    const walk = (nodeId, level = 0) => {
+      if (levelCounts[level] === undefined) levelCounts[level] = 0
+      const orderAtLevel = levelCounts[level]
+      levelCounts[level]++
 
-  const handleNodeEnter = (e, node, pos) => {
-    setTooltip({ node, x: pos.x, y: pos.y })
+      positions[nodeId] = {
+        x: orderAtLevel * (NODE_W + 60) - (levelCounts[level] * (NODE_W + 60)) / 2, // simple centered-ish
+        y: level * LEVEL_H
+      }
+
+      const node = nodeMap[nodeId]
+      if (node && node.children) {
+        node.children.forEach(childId => walk(childId, level + 1))
+      }
+    }
+
+    roots.forEach(rootId => walk(rootId, 1))
+    
+    // Adjust centering: if levelCounts[level] is large, shift the whole level
+    // This is a simple layout, good enough for 5-10 nodes
+    Object.keys(positions).forEach(id => {
+      const level = Math.floor(positions[id].y / LEVEL_H)
+      const count = levelCounts[level] || 1
+      const offset = (count - 1) * (NODE_W + 60) / 2
+      positions[id].x -= offset
+    })
+
+    return positions
+  }, [beliefs])
+
+  const positions = getLayout()
+  const rootX = 0
+  const rootY = -120
+
+  // ── Interaction Handlers ───────────────────────────────────────────────────
+  const handleWheel = (e) => {
+    if (e.ctrlKey) {
+      e.preventDefault()
+      const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1
+      setTransform(prev => ({
+        ...prev,
+        scale: Math.min(Math.max(prev.scale * zoomFactor, 0.1), 3)
+      }))
+    } else {
+      setTransform(prev => ({
+        ...prev,
+        x: prev.x - e.deltaX,
+        y: prev.y - e.deltaY
+      }))
+    }
   }
-  const handleNodeLeave = () => setTooltip(null)
 
-  const truncate = (str, len = 36) =>
-    str && str.length > len ? str.slice(0, len) + '…' : str || ''
+  const handleMouseDown = (e) => {
+    if (e.button === 0) {
+      setIsDragging(true)
+      setLastMouse({ x: e.clientX, y: e.clientY })
+    }
+  }
+
+  const handleMouseMove = useCallback((e) => {
+    if (!isDragging) return
+    const dx = e.clientX - lastMouse.x
+    const dy = e.clientY - lastMouse.y
+    setTransform(prev => ({ ...prev, x: prev.x + dx, y: prev.y + dy }))
+    setLastMouse({ x: e.clientX, y: e.clientY })
+  }, [isDragging, lastMouse])
+
+  const handleMouseUp = () => setIsDragging(false)
+
+  useEffect(() => {
+    if (isDragging) {
+      window.addEventListener('mousemove', handleMouseMove)
+      window.addEventListener('mouseup', handleMouseUp)
+    } else {
+      window.removeEventListener('mousemove', handleMouseMove)
+      window.removeEventListener('mouseup', handleMouseUp)
+    }
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove)
+      window.removeEventListener('mouseup', handleMouseUp)
+    }
+  }, [isDragging, handleMouseMove])
+
+  // ── Canvas Controls ────────────────────────────────────────────────────────
+  const zoom = (factor) => setTransform(prev => ({ ...prev, scale: Math.min(Math.max(prev.scale * factor, 0.1), 3) }))
+  const reset = () => setTransform({ x: 0, y: 0, scale: 0.8 })
 
   return (
-    <div className="relative w-full overflow-x-auto">
-      <svg
-        ref={svgRef}
-        width={totalW}
-        height={totalH}
-        viewBox={`0 0 ${totalW} ${totalH}`}
-        className="mx-auto block"
-        style={{ maxWidth: '100%' }}
-      >
-        <defs>
-          {/* Belief node glows per weight */}
-          {['profound','high','medium','low'].map(w => (
-            <filter key={w} id={`glow_${w}`}>
-              <feGaussianBlur stdDeviation="4" result="blur" />
-              <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-            </filter>
-          ))}
-          <filter id="glow_root">
-            <feGaussianBlur stdDeviation="6" result="blur" />
-            <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-          </filter>
-          <linearGradient id="rootGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#4f46e5" />
-            <stop offset="100%" stopColor="#818CF8" />
-          </linearGradient>
-          <linearGradient id="lineGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="#818CF8" stopOpacity="0.8" />
-            <stop offset="100%" stopColor="#818CF8" stopOpacity="0.15" />
-          </linearGradient>
-          <marker id="dot" markerWidth="5" markerHeight="5" refX="2.5" refY="2.5">
-            <circle cx="2.5" cy="2.5" r="2" fill="#818CF8" opacity="0.6" />
-          </marker>
-        </defs>
+    <div 
+      ref={containerRef}
+      className="relative w-full h-[700px] bg-[#05070a] rounded-2xl border border-white/5 overflow-hidden cursor-grab active:cursor-grabbing select-none"
+      onWheel={handleWheel}
+      onMouseDown={handleMouseDown}
+    >
+      {/* ── Floating Nav UI ───────────────────────────────────────────────────── */}
+      <div className="absolute top-6 right-6 z-20 flex flex-col gap-3">
+        <button onClick={() => zoom(1.2)} className="w-12 h-12 rounded-xl bg-slate-900/80 border border-white/10 flex items-center justify-center text-slate-100 hover:bg-slate-800 transition-all shadow-2xl backdrop-blur-xl group">
+          <span className="material-symbols-outlined text-[24px] group-hover:scale-110 transition-transform">add</span>
+        </button>
+        <button onClick={() => zoom(0.8)} className="w-12 h-12 rounded-xl bg-slate-900/80 border border-white/10 flex items-center justify-center text-slate-100 hover:bg-slate-800 transition-all shadow-2xl backdrop-blur-xl group">
+          <span className="material-symbols-outlined text-[24px] group-hover:scale-110 transition-transform">remove</span>
+        </button>
+        <div className="h-px bg-white/5 mx-2" />
+        <button onClick={reset} className="w-12 h-12 rounded-xl bg-slate-900/80 border border-white/10 flex items-center justify-center text-slate-100 hover:bg-slate-800 transition-all shadow-2xl backdrop-blur-xl group">
+          <span className="material-symbols-outlined text-[24px] group-hover:rotate-180 transition-transform duration-500">restart_alt</span>
+        </button>
+      </div>
 
-        {/* ── Connecting lines ─────────────────────────────────────────── */}
-        {beliefs.map((belief, i) => {
-          const pos = nodePositions[i]
-          let startX = rootX
-          let startY = rootY + ROOT_H / 2
-          
-          // Connect to parent node if parent_id exists
-          if (belief.parent_id) {
-            const parentIdx = beliefs.findIndex(b => b.id === belief.parent_id)
-            if (parentIdx !== -1 && parentIdx !== i) {
-              startX = nodePositions[parentIdx].x
-              startY = nodePositions[parentIdx].y + NODE_H / 2
-            }
-          }
-
-          const color = WEIGHT_COLORS[belief.emotional_weight] || '#818CF8'
-          return (
-            <path
-              key={`line_${i}`}
-              d={`M ${startX} ${startY} C ${startX} ${startY + (pos.y - startY) * 0.5}, ${pos.x} ${pos.y - (pos.y - startY) * 0.5}, ${pos.x} ${pos.y - NODE_H / 2}`}
-              fill="none"
-              stroke={color}
-              strokeWidth="1.5"
-              strokeOpacity="0.4"
-              strokeDasharray="4 4"
-              markerStart={!belief.parent_id ? "url(#dot)" : ""}
-            />
-          )
-        })}
-
-        {/* ── Root node ─────────────────────────────────────────────────── */}
-        <g transform={`translate(${rootX - ROOT_W / 2}, ${rootY - ROOT_H / 2})`}>
-          <rect
-            width={ROOT_W} height={ROOT_H} rx="14"
-            fill="url(#rootGrad)" opacity="0.15"
-            stroke="#818CF8" strokeWidth="1"
-            filter="url(#glow_root)"
-          />
-          <rect width={ROOT_W} height={ROOT_H} rx="14" fill="none" stroke="#818CF8" strokeWidth="1" />
-          <text x={ROOT_W / 2} y="18" textAnchor="middle"
-            fontSize="8" fill="#818CF8" fontFamily="monospace" letterSpacing="2">
-            BELIEF ORIGIN TREE
-          </text>
-          <foreignObject x="10" y="22" width={ROOT_W - 20} height="32">
-            <div xmlns="http://www.w3.org/1999/xhtml"
-              style={{ fontSize: 12, fontWeight: 700, color: '#f8fafc', lineHeight: 1.35,
-                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {session?.dominant_theme || 'Your Belief Origins'}
-            </div>
-          </foreignObject>
-        </g>
-
-        {/* ── Belief nodes ──────────────────────────────────────────────── */}
-        {nodePositions.map((pos, i) => {
-          const belief = beliefs[i]
-          const color = WEIGHT_COLORS[belief.emotional_weight] || '#818CF8'
-          return (
-            <g
-              key={`node_${i}`}
-              transform={`translate(${pos.x - NODE_W / 2}, ${pos.y - NODE_H / 2})`}
-              style={{ cursor: 'pointer' }}
-              onMouseEnter={(e) => handleNodeEnter(e, belief, pos)}
-              onMouseLeave={handleNodeLeave}
-            >
-              {/* Card bg */}
-              <rect width={NODE_W} height={NODE_H} rx="10"
-                fill="#0d1117" stroke={color} strokeWidth="1" strokeOpacity="0.5"
-                filter={`url(#glow_${belief.emotional_weight || 'profound'})`}
-              />
-              {/* Left accent bar */}
-              <rect x="0" y="0" width="3" height={NODE_H} rx="2" fill={color} opacity="0.8" />
-              {/* Index number */}
-              <text x="14" y="20" fontSize="9" fill={color} fontFamily="monospace" fontWeight="700" opacity="0.8">
-                {String(i + 1).padStart(2, '0')}
-              </text>
-              {/* Origin meta */}
-              <text x="14" y="34" fontSize="8" fill={color} fontFamily="monospace" letterSpacing="1" opacity="0.7">
-                {belief.origin_year || '?'} · {belief.origin_person || '?'}
-              </text>
-              {/* Belief text */}
-              <foreignObject x="10" y="40" width={NODE_W - 20} height="36">
-                <div xmlns="http://www.w3.org/1999/xhtml"
-                  style={{ fontSize: 11, fontWeight: 600, color: '#e2e8f0',
-                    lineHeight: 1.4, overflow: 'hidden',
-                    display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                  "{truncate(belief.belief, 55)}"
-                </div>
-              </foreignObject>
-              {/* Still serving dot */}
-              <circle cx={NODE_W - 14} cy="14" r="4"
-                fill={belief.still_serving ? '#4ade80' : '#f87171'} opacity="0.9" />
-            </g>
-          )
-        })}
-
-        {/* ── Timeline axis ─────────────────────────────────────────────── */}
-        {(() => {
-          const years = beliefs.map(b => b.origin_year).filter(Boolean).sort()
-          if (years.length < 2) return null
-          const minY = years[0], maxY = years[years.length - 1]
-          return (
-            <g opacity="0.3">
-              <line x1="28" y1={rootY} x2="28" y2={beliefY + NODE_H / 2}
-                stroke="#818CF8" strokeWidth="0.5" />
-              <text x="28" y={rootY - 10} textAnchor="middle" fontSize="8"
-                fill="#818CF8" fontFamily="monospace">NOW</text>
-              <text x="28" y={beliefY + NODE_H / 2 + 14} textAnchor="middle" fontSize="8"
-                fill="#818CF8" fontFamily="monospace">{minY}</text>
-              {[...new Set(years)].map(y => {
-                const ratio = (y - minY) / Math.max(maxY - minY, 1)
-                const yPos = rootY + ratio * NODE_HEIGHT
-                return (
-                  <g key={y}>
-                    <line x1="22" y1={yPos} x2="34" y2={yPos} stroke="#818CF8" strokeWidth="0.5" />
-                    <text x="18" y={yPos + 3} textAnchor="end" fontSize="7"
-                      fill="#818CF8" fontFamily="monospace">{y}</text>
-                  </g>
-                )
-              })}
-            </g>
-          )
-        })()}
-      </svg>
-
-      {/* ── Tooltip ──────────────────────────────────────────────────────── */}
-      {tooltip && (
-        <div
-          className="pointer-events-none absolute z-50 rounded-xl border border-white/10 bg-[#0d1117]/95 backdrop-blur-xl p-4 shadow-2xl w-64"
-          style={{
-            left: Math.min(tooltip.x, totalW - 270),
-            top: tooltip.y + 10,
-            transform: 'translateX(-50%)',
-          }}
-        >
-          <p className="text-[10px] font-bold uppercase tracking-widest mb-2"
-            style={{ color: WEIGHT_COLORS[tooltip.node.emotional_weight] || '#818CF8' }}>
-            {tooltip.node.emotional_weight} weight
-            <span className="ml-2 text-slate-500">·</span>
-            <span className="ml-2 text-slate-400">
-              {tooltip.node.still_serving ? '✓ Still serving' : '✗ No longer serving you'}
-            </span>
-          </p>
-          <p className="text-slate-200 text-xs font-semibold leading-snug mb-2">
-            "{tooltip.node.belief}"
-          </p>
-          {tooltip.node.cost_today && (
-            <div className="mt-2 border-l-2 border-[#f87171]/60 pl-2">
-              <p className="text-[9px] font-bold uppercase tracking-widest text-[#f87171] mb-0.5">Cost Today</p>
-              <p className="text-slate-400 text-[11px] italic">{tooltip.node.cost_today}</p>
-            </div>
-          )}
+      <div className="absolute bottom-6 left-8 z-20 pointer-events-none opacity-40">
+        <div className="flex items-center gap-3 mb-1">
+          <span className="material-symbols-outlined text-[14px]">mouse</span>
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Nav Control</p>
         </div>
-      )}
+        <p className="text-[9px] text-slate-500 uppercase tracking-widest pl-6">DRAG: Pan • CTRL+SCROLL: Zoom</p>
+      </div>
+
+      {/* ── Interactive Canvas ───────────────────────────────────────────────── */}
+      <div 
+        className="absolute inset-0 transition-transform duration-75 ease-out origin-center"
+        style={{ transform: `translate(calc(50% + ${transform.x}px), calc(40% + ${transform.y}px)) scale(${transform.scale})` }}
+      >
+        <svg width="3000" height="3000" viewBox="-1500 -1500 3000 3000" className="overflow-visible">
+          <defs>
+            <marker id="dot" markerWidth="6" markerHeight="6" refX="3" refY="3">
+              <circle cx="3" cy="3" r="2" fill="#818CF8" opacity="0.4" />
+            </marker>
+          </defs>
+
+          {/* ── Root Concept ─────────────────────────────────────────── */}
+          <g transform={`translate(${rootX - 120}, ${rootY - 45})`}>
+            <rect width="240" height="90" rx="45" fill="#1e293b" stroke="#818CF8" strokeWidth="2" strokeDasharray="5 5" />
+            <text x="120" y="35" textAnchor="middle" fill="#818CF8" className="text-[10px] font-black uppercase tracking-[0.2em]">MindRoots Origin</text>
+            <text x="120" y="58" textAnchor="middle" fill="white" className="text-[15px] font-black">
+              {session?.dominant_theme?.slice(0, 22) || 'Your Core Theme'}
+              {session?.dominant_theme?.length > 22 ? '...' : ''}
+            </text>
+          </g>
+
+          {/* ── Hierarchy Lines ─────────────────────────────────────── */}
+          {beliefs.map((belief) => {
+            const pos = positions[belief.id] || { x: 0, y: 0 }
+            let sX = rootX, sY = rootY + 45
+            
+            if (belief.parent_id && positions[belief.parent_id]) {
+              sX = positions[belief.parent_id].x
+              sY = positions[belief.parent_id].y + NODE_H / 2
+            }
+
+            const color = WEIGHT_COLORS[belief.emotional_weight] || '#818CF8'
+            return (
+              <path
+                key={`line_${belief.id}`}
+                d={`M ${sX} ${sY} C ${sX} ${sY + (pos.y - sY) * 0.4}, ${pos.x} ${pos.y - (pos.y - sY) * 0.6}, ${pos.x} ${pos.y - NODE_H / 2}`}
+                fill="none"
+                stroke={color}
+                strokeWidth="2"
+                strokeOpacity="0.25"
+                strokeDasharray="6 4"
+                markerStart={!belief.parent_id ? "url(#dot)" : ""}
+              />
+            )
+          })}
+
+          {/* ── Belief Nodes ──────────────────────────────────────────── */}
+          {beliefs.map((belief, i) => {
+            const pos = positions[belief.id] || { x: 0, y: 0 }
+            const color = WEIGHT_COLORS[belief.emotional_weight] || '#818CF8'
+            const isHovered = hoveredNode === belief.id
+
+            return (
+              <g 
+                key={belief.id} 
+                transform={`translate(${pos.x - NODE_W / 2}, ${pos.y - NODE_H / 2})`}
+                onMouseEnter={() => setHoveredNode(belief.id)}
+                onMouseLeave={() => setHoveredNode(null)}
+                className="cursor-pointer"
+              >
+                {/* Visual Card */}
+                <rect 
+                  width={NODE_W} height={NODE_H} rx="20" 
+                  fill="#0d1117" stroke={isHovered ? color : `${color}44`} strokeWidth={isHovered ? 2.5 : 1.5}
+                  className="transition-all duration-300"
+                />
+                
+                {/* Weight Accent */}
+                <path d={`M 0 20 A 20 20 0 0 1 20 0 L 60 0 L 0 60 Z`} fill={color} opacity="0.1" />
+                <circle cx="20" cy="20" r="12" fill={`${color}22`} stroke={color} strokeWidth="1" />
+                <text x="20" y="24" textAnchor="middle" fill={color} className="text-[10px] font-black font-mono">
+                  {i + 1}
+                </text>
+
+                {/* Meta text */}
+                <text x="45" y="22" fill={`${color}AA`} className="text-[9px] font-black uppercase tracking-widest">
+                  {belief.origin_year} • {belief.origin_person}
+                </text>
+
+                {/* Belief Statement */}
+                <foreignObject x="20" y="42" width={NODE_W - 40} height={45}>
+                  <div className={`text-[11px] font-bold text-slate-100 leading-tight ${isHovered ? '' : 'line-clamp-2'}`}>
+                    "{belief.belief}"
+                  </div>
+                </foreignObject>
+
+                {/* Status Indicator */}
+                <circle cx={NODE_W - 20} cy="20" r="5" fill={belief.still_serving ? '#ef4444' : '#22c55e'} />
+
+                {/* Tooltip Overlay */}
+                {isHovered && (
+                  <g transform={`translate(0, ${NODE_H + 12})`}>
+                    <rect width={NODE_W + 40} x="-20" height="auto" rx="12" fill="rgba(7,10,16,0.95)" stroke={`${color}44`} className="backdrop-blur-xl" />
+                    <foreignObject x="-10" y="10" width={NODE_W + 20} height="100">
+                      <div className="space-y-2">
+                        <p className="text-[10px] font-black text-red-400 uppercase tracking-widest">The Core Cost</p>
+                        <p className="text-[10px] text-slate-300 leading-snug italic font-medium">
+                          {belief.cost_today}
+                        </p>
+                      </div>
+                    </foreignObject>
+                  </g>
+                )}
+              </g>
+            )
+          })}
+        </svg>
+      </div>
     </div>
   )
 }
