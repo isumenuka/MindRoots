@@ -191,5 +191,5 @@ export default async function generateBeliefPdf(beliefTree) {
   const instance = pdf(doc)
   const blob = await instance.toBlob()
   const arrayBuffer = await blob.arrayBuffer()
-  return Buffer.from(arrayBuffer)
+  return new Uint8Array(arrayBuffer)
 }

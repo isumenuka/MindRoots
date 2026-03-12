@@ -153,10 +153,14 @@ export default function SessionPage({ params }) {
 
           {/* Sticky action bar */}
           <div className="sticky top-4 z-50 mb-12">
-            <div className="bg-surface/80 backdrop-blur-xl border border-white/10 rounded-xl p-3 flex flex-wrap items-center justify-between gap-4 shadow-2xl">
+            <div className="bg-[#0f1117] border border-[#818CF8]/20 rounded-xl p-3 flex flex-wrap items-center justify-between gap-4 shadow-[0_0_30px_rgba(129,140,248,0.08)] backdrop-blur-xl">
               {/* Audio Player */}
               <div className="flex items-center gap-4 flex-1 min-w-[280px]">
-                <AudioPlayer src={session?.narration_url || null} title="Session Audio" />
+              <AudioPlayer
+                  src={session?.narration_url || null}
+                  narrationText={session?.narration_text || null}
+                  title="Session Audio"
+                />
               </div>
 
               {/* Action buttons */}
