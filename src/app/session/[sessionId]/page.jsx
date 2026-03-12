@@ -67,24 +67,20 @@ export default function SessionPage({ params }) {
     if (!uid) return
     setDownloadingPdf(true)
     try {
-      // Load the belief tree data for PDF
+      // Generate PDF directly in the browser (react-pdf/renderer is a browser library)
+      const generateBeliefPdf = (await import('@/services/PdfService')).default
       const beliefTree = { session_summary: session, belief_nodes: beliefs }
-      const res = await fetch('/api/generate-pdf', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ uid, sessionId, beliefTree }),
-      })
-      if (res.ok) {
-        const blob = await res.blob()
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `mindroots-belief-origin-tree-${sessionId.slice(0, 8)}.pdf`
-        a.click()
-        URL.revokeObjectURL(url)
-      }
+      const pdfBytes = await generateBeliefPdf(beliefTree)
+      const blob = new Blob([pdfBytes], { type: 'application/pdf' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `mindroots-belief-origin-tree-${sessionId.slice(0, 8)}.pdf`
+      a.click()
+      URL.revokeObjectURL(url)
     } catch (e) {
-      console.error(e)
+      console.error('[PDF]', e)
+      alert('PDF generation failed: ' + e.message)
     }
     setDownloadingPdf(false)
   }
