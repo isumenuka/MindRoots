@@ -15,11 +15,13 @@ class GeminiLiveService {
 
     this.onAudioChunk = null      // cb(base64Audio: string)
     this.onTranscript = null      // cb({ role, text })
+    this.onTranscriptChunk = null // cb(text) — streams partial agent text into existing bubble
     this.onBeliefFound = null     // cb(beliefNode)
     this.onComplete = null        // cb()
     this.onError = null           // cb(error)
     this.onInterruption = null    // cb()
     this.onTurnComplete = null    // cb()
+    this._outputTranscriptBuffer = '' // accumulate streaming agent words
   }
 
   // Kept for API compatibility, not used
@@ -73,6 +75,13 @@ class GeminiLiveService {
             }
             if (serverContent.turnComplete) {
               console.log('[GeminiLive] Turn complete')
+              // Flush the buffered output transcript as one complete message
+              if (this._outputTranscriptBuffer) {
+                const text = this._outputTranscriptBuffer.trim()
+                this._outputTranscriptBuffer = ''
+                this.fullTranscript.push({ role: 'assistant', text })
+                this._parseBeliefNodes(text)
+              }
               this.onTurnComplete?.()
             }
             // Parse audio
@@ -93,12 +102,18 @@ class GeminiLiveService {
               this.fullTranscript.push({ role: 'user', text })
               this.onTranscript?.({ role: 'user', text })
             }
-            // Parse output transcript
+            // Parse output transcript — buffer chunks, emit one bubble per turn
             if (serverContent.outputTranscription?.text) {
-              const text = serverContent.outputTranscription.text
-              this.fullTranscript.push({ role: 'assistant', text })
-              this.onTranscript?.({ role: 'assistant', text })
-              this._parseBeliefNodes(text)
+              const chunk = serverContent.outputTranscription.text
+              if (!this._outputTranscriptBuffer) {
+                // First chunk: create an empty bubble then stream into it
+                this._outputTranscriptBuffer = chunk
+                this.onTranscript?.({ role: 'assistant', text: chunk })
+              } else {
+                // Subsequent chunks: append to existing bubble
+                this._outputTranscriptBuffer += chunk
+                this.onTranscriptChunk?.(chunk)
+              }
             }
           } else if (msg.setupComplete) {
             console.log("🏁 Setup accepted by Gemini")
@@ -230,23 +245,16 @@ class GeminiLiveService {
   }
 
   async sendAudioStreamEnd() {
-    // Native VAD will handle most turn taking now.
-    // If we need manual interruption:
+    // Signal end of audio stream so Gemini flushes its VAD buffer
     if (!this.isConnected) return
-    this._send({ clientContent: { turnComplete: true } })
+    this._send({ realtimeInput: { audioStreamEnd: true } })
   }
 
-  // Send text message
+  // Send text message — use sendRealtimeInput for ALL real-time input (not clientContent)
   async sendText(text) {
     if (!this.isConnected) return
     this._send({
-      clientContent: {
-        turns: [{
-          role: "user",
-          parts: [{ text: text }]
-        }],
-        turnComplete: true
-      }
+      realtimeInput: { text }
     })
     this.fullTranscript.push({ role: 'user', text })
     this.onTranscript?.({ role: 'user', text })

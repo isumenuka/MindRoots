@@ -15,7 +15,7 @@ const MAX_BELIEFS = 5
 
 export default function InterviewPage() {
   const router = useRouter()
-  const { setUser, setSessionId, addBelief, beliefs, addTranscriptEntry, clearTranscript, transcript, setIsInterviewing } = useAppStore()
+  const { setUser, setSessionId, addBelief, beliefs, addTranscriptEntry, appendLastTranscriptEntry, clearTranscript, transcript, setIsInterviewing } = useAppStore()
 
   const [user, setLocalUser] = useState(null)
   const [sessionId, setLocalSessionId] = useState(null)
@@ -49,17 +49,26 @@ export default function InterviewPage() {
     if (!user || sessionCreatedRef.current) return
     sessionCreatedRef.current = true
 
+    let cancelled = false
+
     const init = async () => {
+      // Guard against React StrictMode double-invoke (mounts twice in dev)
+      if (liveServiceRef.current) return
+      // Set sentinel immediately so any concurrent second call bails out
+      liveServiceRef.current = { endSession: () => {}, _sentinel: true }
+
       clearTranscript()
 
       // Create Firestore session
       const sid = await createSession(user.uid)
+      if (cancelled) { liveServiceRef.current = null; return }
       setLocalSessionId(sid)
       setSessionId(sid)
       setIsInterviewing(true)
 
       // Pre-warm the audio worklet so it doesn't drop the first chunk
       await initAudioPlayer()
+      if (cancelled) { liveServiceRef.current = null; return }
 
       // Initialize Gemini Live
       const svc = new GeminiLiveService()
@@ -77,7 +86,11 @@ export default function InterviewPage() {
 
       svc.onTranscript = (entry) => {
         addTranscriptEntry(entry)
-        // Don't setAgentStatus('listening') here, wait for turnComplete
+      }
+
+      // Streaming chunks: append words into the last agent bubble
+      svc.onTranscriptChunk = (chunk) => {
+        appendLastTranscriptEntry(chunk)
       }
 
       svc.onTurnComplete = () => {
@@ -113,6 +126,7 @@ export default function InterviewPage() {
 
       try {
         await svc.startSession()
+        if (cancelled) { svc.endSession(); liveServiceRef.current = null; return }
         liveServiceRef.current = svc
         setAgentStatus('active')
 
@@ -132,6 +146,12 @@ export default function InterviewPage() {
     }
 
     init()
+
+    // Cleanup: cancel async init if StrictMode unmounts before it finishes
+    return () => {
+      cancelled = true
+      sessionCreatedRef.current = false
+    }
   }, [user])
 
   // Cleanup on unmount

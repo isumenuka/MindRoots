@@ -23,7 +23,7 @@ if not GEMINI_API_KEY:
 
 ADMIN_SECRET = os.environ.get("ADMIN_SECRET", "mindroots-admin-2025")
 
-LIVE_MODEL = "gemini-2.5-flash-native-audio"
+LIVE_MODEL = "gemini-2.5-flash-native-audio-preview-12-2025"
 
 # ─── Live config (mutable — updated by admin dashboard) ──
 live_config: dict = {

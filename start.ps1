@@ -44,13 +44,15 @@ if (Test-Path $nextDir) {
 
 # ── Step 3: Clear Python caches ───────────────────────────────────────
 Write-Host "[3/4] Clearing Python caches (__pycache__)..." -ForegroundColor Yellow
-Get-ChildItem -Path $root -Recurse -Directory -Filter "__pycache__" | ForEach-Object {
-    Remove-Item -Recurse -Force $_.FullName
-    Write-Host "      ✓ Deleted $($_.FullName)" -ForegroundColor DarkGray
-}
-Get-ChildItem -Path $root -Recurse -File -Filter "*.pyc" | ForEach-Object {
-    Remove-Item -Force $_.FullName
-}
+Get-ChildItem -Path $root -Recurse -Directory -Filter "__pycache__" |
+    Where-Object { $_.FullName -notlike "*\.venv\*" } |
+    ForEach-Object {
+        Remove-Item -Recurse -Force $_.FullName
+        Write-Host "      ✓ Deleted $($_.FullName)" -ForegroundColor DarkGray
+    }
+Get-ChildItem -Path $root -Recurse -File -Filter "*.pyc" |
+    Where-Object { $_.FullName -notlike "*\.venv\*" } |
+    ForEach-Object { Remove-Item -Force $_.FullName }
 Write-Host "      ✓ Python cache cleared" -ForegroundColor DarkGray
 
 # ── Step 4: Start all services fresh ─────────────────────────────────

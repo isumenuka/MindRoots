@@ -36,6 +36,16 @@ const useAppStore = create((set, get) => ({
   // Transcript
   transcript: [],
   addTranscriptEntry: (entry) => set((state) => ({ transcript: [...state.transcript, entry] })),
+  // Append text to the last entry in place (for streaming agent chunks → single bubble)
+  appendLastTranscriptEntry: (text) => set((state) => {
+    if (state.transcript.length === 0) return {}
+    const updated = [...state.transcript]
+    updated[updated.length - 1] = {
+      ...updated[updated.length - 1],
+      text: updated[updated.length - 1].text + text,
+    }
+    return { transcript: updated }
+  }),
   clearTranscript: () => set({ transcript: [] }),
 
   // Reset everything for new session
