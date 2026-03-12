@@ -60,16 +60,16 @@ export default function LandingPage() {
   return (
     <>
       {/* Background */}
-      <div className="fixed inset-0 bg-[#0A0A0A] -z-10" />
-      <div className="fixed inset-0 hero-gradient -z-10 pointer-events-none" />
-      <div className="fixed top-[-20%] left-[-10%] w-[50%] h-[50%] bg-[#818CF8]/5 blur-[140px] rounded-full -z-10 pointer-events-none" />
-      <div className="fixed bottom-[-20%] right-[-10%] w-[40%] h-[40%] bg-[#818CF8]/4 blur-[120px] rounded-full -z-10 pointer-events-none" />
+      <div suppressHydrationWarning className="fixed inset-0 bg-[#0A0A0A] -z-10" />
+      <div suppressHydrationWarning className="fixed inset-0 hero-gradient -z-10 pointer-events-none" />
+      <div suppressHydrationWarning className="fixed top-[-20%] left-[-10%] w-[50%] h-[50%] bg-[#818CF8]/5 blur-[140px] rounded-full -z-10 pointer-events-none" />
+      <div suppressHydrationWarning className="fixed bottom-[-20%] right-[-10%] w-[40%] h-[40%] bg-[#818CF8]/4 blur-[120px] rounded-full -z-10 pointer-events-none" />
 
       {/* Nav */}
-      <nav className="fixed top-0 w-full z-50 border-b border-white/5 bg-[#0A0A0A]/80 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 sm:h-20 py-4 sm:py-5 flex items-center justify-between">
+      <nav suppressHydrationWarning className="fixed top-0 w-full z-50 border-b border-white/5 bg-[#0A0A0A]/80 backdrop-blur-md">
+        <div suppressHydrationWarning className="max-w-7xl mx-auto px-4 sm:px-6 h-16 sm:h-20 py-4 sm:py-5 flex items-center justify-between">
           <AppLogo />
-          <div className="flex items-center gap-3 sm:gap-4">
+          <div suppressHydrationWarning className="flex items-center gap-3 sm:gap-4">
             {user ? (
               <div className="flex items-center gap-4">
                 <button
@@ -111,9 +111,9 @@ export default function LandingPage() {
       </nav>
 
       {/* Hero */}
-      <section className="relative pt-44 pb-24 overflow-hidden">
-        <div className="max-w-5xl mx-auto px-6 text-center">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#818CF8]/10 border border-[#818CF8]/20 text-[#818CF8] text-[10px] font-bold uppercase tracking-widest mb-8">
+      <section suppressHydrationWarning className="relative pt-44 pb-24 overflow-hidden">
+        <div suppressHydrationWarning className="max-w-5xl mx-auto px-6 text-center">
+          <div suppressHydrationWarning className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#818CF8]/10 border border-[#818CF8]/20 text-[#818CF8] text-[10px] font-bold uppercase tracking-widest mb-8">
             <span className="material-symbols-outlined text-sm">auto_awesome</span>
             AI-Driven Belief Archaeology
           </div>
@@ -132,7 +132,7 @@ export default function LandingPage() {
             <p className="text-red-400 text-sm mb-4">{error}</p>
           )}
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+          <div suppressHydrationWarning className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <button
               onClick={() => {
                 if (user) {
@@ -158,16 +158,16 @@ export default function LandingPage() {
       </section>
 
       {/* Video Demo Window */}
-      <section className="relative pb-24 max-w-5xl mx-auto px-4 sm:px-6 z-10">
-        <div className="glass-card rounded-2xl overflow-hidden border border-white/10 shadow-[0_20px_50px_-12px_rgba(129,140,248,0.25)]">
+      <section suppressHydrationWarning className="relative pb-24 max-w-5xl mx-auto px-4 sm:px-6 z-10">
+        <div suppressHydrationWarning className="glass-card rounded-2xl overflow-hidden border border-white/10 shadow-[0_20px_50px_-12px_rgba(129,140,248,0.25)]">
           {/* Mac window header */}
-          <div className="bg-white/5 border-b border-white/5 px-4 py-3 flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-[#ff5f56]" />
-            <div className="w-3 h-3 rounded-full bg-[#ffbd2e]" />
-            <div className="w-3 h-3 rounded-full bg-[#27c93f]" />
+          <div suppressHydrationWarning className="bg-white/5 border-b border-white/5 px-4 py-3 flex items-center gap-2">
+            <div suppressHydrationWarning className="w-3 h-3 rounded-full bg-[#ff5f56]" />
+            <div suppressHydrationWarning className="w-3 h-3 rounded-full bg-[#ffbd2e]" />
+            <div suppressHydrationWarning className="w-3 h-3 rounded-full bg-[#27c93f]" />
           </div>
           {/* Video content */}
-          <div className="relative aspect-video w-full bg-black">
+          <div suppressHydrationWarning className="relative aspect-video w-full bg-black">
             <iframe 
               width="100%" 
               height="100%" 
@@ -183,20 +183,20 @@ export default function LandingPage() {
       </section>
 
       {/* 3-Step How it works */}
-      <section id="how-it-works" className="py-20 max-w-7xl mx-auto px-6">
-        <div className="text-center mb-14">
+      <section suppressHydrationWarning id="how-it-works" className="py-20 max-w-7xl mx-auto px-6">
+        <div suppressHydrationWarning className="text-center mb-14">
           <h2 className="text-3xl md:text-4xl font-display font-bold text-white mb-4">How it works</h2>
           <p className="text-slate-500 max-w-xl mx-auto">Three AI agents working in sequence to excavate, structure, and illustrate your inner world.</p>
         </div>
-        <div className="grid md:grid-cols-3 gap-6">
+        <div suppressHydrationWarning className="grid md:grid-cols-3 gap-6">
           {[
             { icon: 'mic', step: '01', title: 'Voice Interview', desc: 'A warm, persistent AI archaeologist asks "why" until it reaches the exact origin moment of each belief.' },
             { icon: 'account_tree', step: '02', title: 'Belief Structuring', desc: 'An AI data agent structures your raw beliefs into a validated Origin Tree with written analysis.' },
             { icon: 'auto_stories', step: '03', title: 'Your Map', desc: 'AI-generated illustrations, a narrated MP3 of your story, and a downloadable PDF of your Belief Origin Tree.' },
           ].map((item) => (
-            <div key={item.step} className="glass-card p-8 rounded-2xl group hover:border-[#818CF8]/30 transition-all">
-              <div className="flex items-start justify-between mb-6">
-                <div className="w-12 h-12 bg-[#818CF8]/15 rounded-xl flex items-center justify-center border border-[#818CF8]/20">
+            <div suppressHydrationWarning key={item.step} className="glass-card p-8 rounded-2xl group hover:border-[#818CF8]/30 transition-all">
+              <div suppressHydrationWarning className="flex items-start justify-between mb-6">
+                <div suppressHydrationWarning className="w-12 h-12 bg-[#818CF8]/15 rounded-xl flex items-center justify-center border border-[#818CF8]/20">
                   <span className="material-symbols-outlined text-[#818CF8]">{item.icon}</span>
                 </div>
                 <span className="text-4xl font-display font-black text-white/5">{item.step}</span>
@@ -209,9 +209,9 @@ export default function LandingPage() {
       </section>
 
       {/* Sign-up CTA */}
-      <section id="signup-cta" className="py-20 max-w-7xl mx-auto px-6">
-        <div className="glass-card rounded-3xl overflow-hidden grid lg:grid-cols-2">
-          <div className="p-12 md:p-16 flex flex-col justify-center">
+      <section suppressHydrationWarning id="signup-cta" className="py-20 max-w-7xl mx-auto px-6">
+        <div suppressHydrationWarning className="glass-card rounded-3xl overflow-hidden grid lg:grid-cols-2">
+          <div suppressHydrationWarning className="p-12 md:p-16 flex flex-col justify-center">
             <h2 className="text-4xl md:text-5xl font-display font-bold text-white mb-6">Ready to dig deeper?</h2>
             <p className="text-slate-400 text-lg mb-10 max-w-md">
               Join thousands of founders, executives, and coaches who've excavated the foundations of their cognitive landscape.
@@ -225,8 +225,8 @@ export default function LandingPage() {
               ))}
             </ul>
           </div>
-          <div className="p-8 md:p-12 bg-white/2 border-l border-white/5 flex items-center justify-center">
-            <div className="glass-card p-8 rounded-3xl max-w-sm w-full">
+          <div suppressHydrationWarning className="p-8 md:p-12 bg-white/2 border-l border-white/5 flex items-center justify-center">
+            <div suppressHydrationWarning className="glass-card p-8 rounded-3xl max-w-sm w-full">
               <h3 className="text-xl font-display font-bold text-white mb-6 text-center">Create your account</h3>
               <button
                 onClick={handleSignIn}
@@ -251,13 +251,13 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="py-10 border-t border-white/5 max-w-7xl mx-auto px-6">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-2">
+      <footer suppressHydrationWarning className="py-10 border-t border-white/5 max-w-7xl mx-auto px-6">
+        <div suppressHydrationWarning className="flex flex-col md:flex-row items-center justify-between gap-6">
+          <div suppressHydrationWarning className="flex items-center gap-2">
             <span className="material-symbols-outlined text-[#818CF8]">psychology</span>
             <span className="text-xs text-slate-500">© 2026 MindRoots AI. All rights reserved.</span>
           </div>
-          <div className="flex gap-8 text-[11px] font-semibold tracking-wide uppercase text-slate-500">
+          <div suppressHydrationWarning className="flex gap-8 text-[11px] font-semibold tracking-wide uppercase text-slate-500">
             <a href="#" className="hover:text-[#818CF8] transition-colors">Privacy</a>
             <a href="#" className="hover:text-[#818CF8] transition-colors">Security</a>
             <a href="#" className="hover:text-[#818CF8] transition-colors">Contact</a>
