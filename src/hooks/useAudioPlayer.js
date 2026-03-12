@@ -3,79 +3,109 @@ import { useState, useCallback, useRef } from 'react';
 export default function useAudioPlayer(sampleRate = 24000) {
   const [isPlaying, setIsPlaying] = useState(false);
   const audioContextRef = useRef(null);
+  const workletNodeRef = useRef(null);
+  const gainNodeRef = useRef(null);
   const analyserRef = useRef(null);
-  const nextTimeRef = useRef(0);
+  const isInitializedRef = useRef(false);
 
   const init = useCallback(async () => {
-    if (!audioContextRef.current) {
+    if (isInitializedRef.current) return;
+
+    try {
+      // Create audio context at 24kHz to match Gemini
       audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)({
         sampleRate,
       });
+
+      // Load the audio worklet from external file
+      await audioContextRef.current.audioWorklet.addModule(
+        "audio-processors/playback.worklet.js"
+      );
+
+      // Create worklet node
+      workletNodeRef.current = new AudioWorkletNode(
+        audioContextRef.current,
+        "pcm-processor"
+      );
+
+      // Create gain node for volume control
+      gainNodeRef.current = audioContextRef.current.createGain();
+      gainNodeRef.current.gain.value = 1.0;
+
+      // Create analyser for visualizer
       analyserRef.current = audioContextRef.current.createAnalyser();
       analyserRef.current.fftSize = 256;
+
+      // Connect nodes
+      workletNodeRef.current.connect(gainNodeRef.current);
+      gainNodeRef.current.connect(analyserRef.current);
       analyserRef.current.connect(audioContextRef.current.destination);
-    }
-    if (audioContextRef.current.state === 'suspended') {
-      await audioContextRef.current.resume();
+
+      isInitializedRef.current = true;
+      console.log("🔊 Audio player initialized");
+    } catch (error) {
+      console.error("Failed to initialize audio player:", error);
+      throw error;
     }
   }, [sampleRate]);
 
   const stopPlayback = useCallback(() => {
-    // Clear audio queue conceptually by resetting nextTimeRef to current time.
-    if (audioContextRef.current) {
-      nextTimeRef.current = audioContextRef.current.currentTime;
+    if (workletNodeRef.current) {
+      workletNodeRef.current.port.postMessage("interrupt");
     }
     setIsPlaying(false);
   }, []);
 
-  const playChunk = useCallback((base64String) => {
-    if (!audioContextRef.current) return;
-    
-    // Decode base64 to Int16Array
-    const binaryString = atob(base64String);
-    const len = binaryString.length;
-    const bytes = new Uint8Array(len);
-    for (let i = 0; i < len; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
-    }
-    const int16Array = new Int16Array(bytes.buffer);
-    
-    // Convert Int16Array to Float32Array (-1.0 to 1.0)
-    const float32Array = new Float32Array(int16Array.length);
-    for (let i = 0; i < int16Array.length; i++) {
-      float32Array[i] = int16Array[i] / 32768.0;
+  const playChunk = useCallback(async (base64Audio) => {
+    if (!isInitializedRef.current) {
+      await init();
     }
 
-    const audioBuffer = audioContextRef.current.createBuffer(1, float32Array.length, sampleRate);
-    audioBuffer.copyToChannel(float32Array, 0);
-
-    const source = audioContextRef.current.createBufferSource();
-    source.buffer = audioBuffer;
-    source.connect(analyserRef.current);
-
-    const currentTime = audioContextRef.current.currentTime;
-    if (nextTimeRef.current < currentTime) {
-      nextTimeRef.current = currentTime; // Buffer underrun, start immediately
-    }
-
-    source.start(nextTimeRef.current);
-    nextTimeRef.current += audioBuffer.duration;
-    setIsPlaying(true);
-
-    source.onended = () => {
-      // Re-evaluate if this was the last queued chunk
-      if (audioContextRef.current && audioContextRef.current.currentTime >= nextTimeRef.current) {
-        setIsPlaying(false);
+    try {
+      // Resume audio context if suspended
+      if (audioContextRef.current.state === "suspended") {
+        await audioContextRef.current.resume();
       }
-    };
-  }, [sampleRate]);
+
+      // Convert base64 to Float32Array
+      const binaryString = atob(base64Audio);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+
+      // Convert PCM16 LE to Float32
+      const inputArray = new Int16Array(bytes.buffer);
+      const float32Data = new Float32Array(inputArray.length);
+      for (let i = 0; i < inputArray.length; i++) {
+        float32Data[i] = inputArray[i] / 32768.0;
+      }
+
+      // Send to worklet for playback
+      workletNodeRef.current.port.postMessage(float32Data);
+      
+      if (!isPlaying) {
+         setIsPlaying(true);
+         // Reset state shortly after so the wave goes idle if no more chunks arrive
+         // We do this more robustly by monitoring it externally, but here's a naive timeout fallback
+         setTimeout(() => setIsPlaying(false), 3000); 
+      }
+    } catch (error) {
+      console.error("Error playing audio chunk:", error);
+      throw error;
+    }
+  }, [init, isPlaying]);
 
   const stop = useCallback(() => {
     stopPlayback();
     if (audioContextRef.current) {
       audioContextRef.current.close().then(() => {
         audioContextRef.current = null;
+        workletNodeRef.current = null;
+        gainNodeRef.current = null;
         analyserRef.current = null;
+        isInitializedRef.current = false;
+        setIsPlaying(false);
       });
     }
   }, [stopPlayback]);
