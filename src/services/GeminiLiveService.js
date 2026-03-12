@@ -218,13 +218,13 @@ class GeminiLiveService {
   // Send encoded PCM16 Base64 chunk to Gemini Native Endpoint
   async sendAudio(base64Audio) {
     if (!this.isConnected) return
-    // `realtimeInput: { mediaChunks: [{ ... }] }` is the official standard Live structure
+    // Correct format: realtimeInput.audio (not deprecated mediaChunks)
     this._send({
       realtimeInput: {
-        mediaChunks: [{
-          mimeType: "audio/pcm;rate=16000",
-          data: base64Audio
-        }]
+        audio: {
+          data: base64Audio,
+          mimeType: "audio/pcm;rate=16000"
+        }
       }
     })
   }

@@ -7,17 +7,19 @@ export default function useAudioPlayer(sampleRate = 24000) {
   const gainNodeRef = useRef(null);
   const analyserRef = useRef(null);
   const isInitializedRef = useRef(false);
+  // Use a ref for isPlaying inside playChunk to avoid stale closure
+  const isPlayingRef = useRef(false);
 
   const init = useCallback(async () => {
     if (isInitializedRef.current) return;
 
     try {
-      // Create audio context at 24kHz to match Gemini
+      // Create audio context at 24kHz to match Gemini output
       audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)({
         sampleRate,
       });
 
-      // Load the audio worklet from external file
+      // Load the audio worklet from public folder
       await audioContextRef.current.audioWorklet.addModule(
         "audio-processors/playback.worklet.js"
       );
@@ -36,21 +38,10 @@ export default function useAudioPlayer(sampleRate = 24000) {
       analyserRef.current = audioContextRef.current.createAnalyser();
       analyserRef.current.fftSize = 256;
 
-      // Connect nodes
+      // Connect nodes: worklet → gain → analyser → speakers
       workletNodeRef.current.connect(gainNodeRef.current);
       gainNodeRef.current.connect(analyserRef.current);
       analyserRef.current.connect(audioContextRef.current.destination);
-
-      const resumeContext = () => {
-        if (audioContextRef.current && audioContextRef.current.state === "suspended") {
-          audioContextRef.current.resume().catch(console.error);
-        }
-      };
-
-      // Ensure we resume on any user interaction across the window
-      window.addEventListener("click", resumeContext, { once: true });
-      window.addEventListener("touchstart", resumeContext, { once: true });
-      window.addEventListener("keydown", resumeContext, { once: true });
 
       isInitializedRef.current = true;
       console.log("🔊 Audio player initialized");
@@ -64,31 +55,33 @@ export default function useAudioPlayer(sampleRate = 24000) {
     if (workletNodeRef.current) {
       workletNodeRef.current.port.postMessage("interrupt");
     }
+    isPlayingRef.current = false;
     setIsPlaying(false);
   }, []);
 
+  // Bug fix: no isPlaying in deps — avoids stale closure when onAudioChunk is set once at session init
   const playChunk = useCallback(async (base64Audio) => {
     if (!isInitializedRef.current) {
       await init();
     }
 
     try {
-      // Resume audio context if suspended
+      // Bug fix: always resume — browser autoplay policy suspends AudioContext created before user gesture
       if (audioContextRef.current.state === "suspended") {
         await audioContextRef.current.resume();
       }
 
-      // Handle odd length by truncating the last byte if necessary
+      // Handle odd byte length
       const binaryString = window.atob(base64Audio);
       const byteLength = binaryString.length;
       const validByteLength = byteLength % 2 !== 0 ? byteLength - 1 : byteLength;
-      
+
       const bytes = new Uint8Array(validByteLength);
       for (let i = 0; i < validByteLength; i++) {
         bytes[i] = binaryString.charCodeAt(i);
       }
 
-      // Convert PCM16 LE to Float32
+      // Convert PCM16 LE → Float32
       const inputArray = new Int16Array(bytes.buffer);
       const float32Data = new Float32Array(inputArray.length);
       for (let i = 0; i < inputArray.length; i++) {
@@ -97,18 +90,16 @@ export default function useAudioPlayer(sampleRate = 24000) {
 
       // Send to worklet for playback
       workletNodeRef.current.port.postMessage(float32Data);
-      
-      if (!isPlaying) {
-         setIsPlaying(true);
-         // Reset state shortly after so the wave goes idle if no more chunks arrive
-         // We do this more robustly by monitoring it externally, but here's a naive timeout fallback
-         setTimeout(() => setIsPlaying(false), 3000); 
+
+      if (!isPlayingRef.current) {
+        isPlayingRef.current = true;
+        setIsPlaying(true);
       }
     } catch (error) {
       console.error("Error playing audio chunk:", error);
       throw error;
     }
-  }, [init, isPlaying]);
+  }, [init]); // removed isPlaying from deps — use ref instead
 
   const stop = useCallback(() => {
     stopPlayback();
@@ -119,6 +110,7 @@ export default function useAudioPlayer(sampleRate = 24000) {
         gainNodeRef.current = null;
         analyserRef.current = null;
         isInitializedRef.current = false;
+        isPlayingRef.current = false;
         setIsPlaying(false);
       });
     }
