@@ -22,6 +22,7 @@ Respond ONLY with valid JSON in this exact format — no markdown code fences, n
   "belief_nodes": [
     {
       "id": "belief_1",
+      "parent_id": "string | null — id of a belief that birthed this one, if any",
       "belief": "string — the core limiting belief statement, written in first person",
       "origin_person": "string",
       "origin_event": "string",

@@ -5,6 +5,9 @@ import { auth, onAuthStateChanged, getSession, getBeliefs, generateShareToken } 
 import BeliefCard from '@/components/BeliefCard'
 import AudioPlayer from '@/components/AudioPlayer'
 import AppLogo from '@/components/AppLogo'
+import BeliefTreeMap from '@/components/BeliefTreeMap'
+import CostImpactPanel from '@/components/CostImpactPanel'
+import NarrationModal from '@/components/NarrationModal'
 
 export default function SessionPage({ params }) {
   const router = useRouter()
@@ -19,6 +22,8 @@ export default function SessionPage({ params }) {
   const [shareUrl, setShareUrl] = useState(null)
   const [copying, setCopying] = useState(false)
   const [downloadingPdf, setDownloadingPdf] = useState(false)
+  const [activeTab, setActiveTab] = useState('cards') // 'cards' | 'tree'
+  const [showNarration, setShowNarration] = useState(false)
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
@@ -31,7 +36,6 @@ export default function SessionPage({ params }) {
   useEffect(() => {
     const uid = user?.uid || uidParam
     if (!uid || !sessionId) return
-
     const load = async () => {
       try {
         const ses = await getSession(uid, sessionId)
@@ -39,9 +43,7 @@ export default function SessionPage({ params }) {
         const bels = await getBeliefs(uid, sessionId)
         const sorted = bels.sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0))
         setBeliefs(sorted)
-      } catch (e) {
-        console.error(e)
-      }
+      } catch (e) { console.error(e) }
       setLoading(false)
     }
     load()
@@ -57,9 +59,7 @@ export default function SessionPage({ params }) {
       await navigator.clipboard.writeText(url)
       setCopying(true)
       setTimeout(() => setCopying(false), 2000)
-    } catch (e) {
-      console.error(e)
-    }
+    } catch (e) { console.error(e) }
   }
 
   const handleDownloadPdf = async () => {
@@ -67,7 +67,6 @@ export default function SessionPage({ params }) {
     if (!uid) return
     setDownloadingPdf(true)
     try {
-      // Generate PDF directly in the browser (react-pdf/renderer is a browser library)
       const generateBeliefPdf = (await import('@/services/PdfService')).default
       const beliefTree = { session_summary: session, belief_nodes: beliefs }
       const pdfBytes = await generateBeliefPdf(beliefTree)
@@ -88,10 +87,9 @@ export default function SessionPage({ params }) {
   if (loading) {
     return (
       <div className="min-h-screen bg-background-dark flex flex-col items-center justify-center relative overflow-hidden">
-        {/* Ambient Background Effect */}
-        <div className="fixed inset-0 ambient-gradient pointer-events-none"></div>
-        <div className="fixed top-[-10%] left-[-10%] w-[40%] h-[40%] bg-accent/5 blur-[120px] rounded-full"></div>
-        <div className="fixed bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-accent/5 blur-[120px] rounded-full"></div>
+        <div className="fixed inset-0 ambient-gradient pointer-events-none" />
+        <div className="fixed top-[-10%] left-[-10%] w-[40%] h-[40%] bg-accent/5 blur-[120px] rounded-full" />
+        <div className="fixed bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-accent/5 blur-[120px] rounded-full" />
         <div className="text-center relative z-10">
           <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-4" />
           <p className="text-muted text-sm uppercase tracking-widest font-semibold">Loading your belief map...</p>
@@ -101,37 +99,35 @@ export default function SessionPage({ params }) {
   }
 
   const dominantTheme = session?.dominant_theme || beliefs[0]?.belief || 'Your Belief Origins'
-  const sessionDate = session?.created_at?.toDate?.()?.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) || 'Session'
+  const sessionDate = session?.created_at?.toDate?.()?.toLocaleDateString('en-US', {
+    month: 'long', day: 'numeric', year: 'numeric'
+  }) || 'Session'
 
   return (
     <div className="min-h-screen flex flex-col relative overflow-hidden">
-      {/* Background */}
-      <div className="fixed inset-0 ambient-gradient pointer-events-none"></div>
-      <div className="fixed top-[-10%] left-[-10%] w-[40%] h-[40%] bg-accent/5 blur-[120px] rounded-full"></div>
-      <div className="fixed bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-accent/5 blur-[120px] rounded-full"></div>
+      <div className="fixed inset-0 ambient-gradient pointer-events-none" />
+      <div className="fixed top-[-10%] left-[-10%] w-[40%] h-[40%] bg-accent/5 blur-[120px] rounded-full" />
+      <div className="fixed bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-accent/5 blur-[120px] rounded-full" />
 
-      {/* Header */}
+      {/* ── Header ───────────────────────────────────────────────────── */}
       <header className="relative z-10 flex items-center justify-between border-b border-white/5 px-6 py-4 lg:px-40">
         <AppLogo />
         <div className="flex gap-2 sm:gap-3">
-          <button
-            onClick={() => router.push('/history')}
-            className="flex items-center justify-center rounded-xl h-10 w-10 bg-surface text-slate-100 hover:bg-white/10 transition-colors"
-          >
-            <span className="material-symbols-outlined text-[20px] sm:text-[20px]">history</span>
+          <button onClick={() => router.push('/history')}
+            className="flex items-center justify-center rounded-xl h-10 w-10 bg-surface text-slate-100 hover:bg-white/10 transition-colors">
+            <span className="material-symbols-outlined text-[20px]">history</span>
           </button>
-          <button
-            onClick={() => router.push('/settings')}
-            className="flex items-center justify-center rounded-xl h-10 w-10 bg-surface text-slate-100 hover:bg-white/10 transition-colors"
-          >
-            <span className="material-symbols-outlined text-[20px] sm:text-[20px]">settings</span>
+          <button onClick={() => router.push('/settings')}
+            className="flex items-center justify-center rounded-xl h-10 w-10 bg-surface text-slate-100 hover:bg-white/10 transition-colors">
+            <span className="material-symbols-outlined text-[20px]">settings</span>
           </button>
         </div>
       </header>
 
       <main className="relative z-10 flex flex-1 flex-col items-center">
         <div className="w-full max-w-[960px] px-6 lg:px-10 py-8">
-          {/* Hero */}
+
+          {/* ── Hero ─────────────────────────────────────────────────── */}
           <div className="mb-10 text-center lg:text-left">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent/10 border border-accent/20 mb-4">
               <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
@@ -147,32 +143,40 @@ export default function SessionPage({ params }) {
             </p>
           </div>
 
-          {/* Sticky action bar */}
-          <div className="sticky top-4 z-50 mb-12">
-            <div className="bg-[#0f1117] border border-[#818CF8]/20 rounded-xl p-3 flex flex-wrap items-center justify-between gap-4 shadow-[0_0_30px_rgba(129,140,248,0.08)] backdrop-blur-xl">
-              {/* Audio Player */}
-              <div className="flex items-center gap-4 flex-1 min-w-[280px]">
-              <AudioPlayer
+          {/* ── Sticky action bar ────────────────────────────────────── */}
+          <div className="sticky top-4 z-50 mb-10">
+            <div className="bg-[#0f1117] border border-[#818CF8]/20 rounded-xl p-3 flex flex-wrap items-center justify-between gap-3 shadow-[0_0_30px_rgba(129,140,248,0.08)] backdrop-blur-xl">
+              {/* Audio player */}
+              <div className="flex items-center gap-4 flex-1 min-w-[220px]">
+                <AudioPlayer
                   src={session?.narration_url || null}
                   narrationText={session?.narration_text || null}
                   title="Session Audio"
                 />
               </div>
-
-              {/* Action buttons */}
-              <div className="flex gap-2">
+              {/* Actions */}
+              <div className="flex gap-2 flex-wrap">
+                {/* 🎬 Documentary button */}
                 <button
-                  onClick={handleDownloadPdf}
-                  disabled={downloadingPdf}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-surface border border-white/10 text-sm font-bold text-slate-100 hover:bg-white/5 transition-colors disabled:opacity-50"
+                  onClick={() => setShowNarration(true)}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all"
+                  style={{
+                    background: 'linear-gradient(135deg, rgba(79,70,229,0.2), rgba(129,140,248,0.1))',
+                    border: '1px solid rgba(129,140,248,0.35)',
+                    color: '#818CF8',
+                    boxShadow: '0 0 12px rgba(129,140,248,0.12)',
+                  }}
                 >
+                  <span className="material-symbols-outlined text-[18px]">movie</span>
+                  <span>Documentary</span>
+                </button>
+                <button onClick={handleDownloadPdf} disabled={downloadingPdf}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-surface border border-white/10 text-sm font-bold text-slate-100 hover:bg-white/5 transition-colors disabled:opacity-50">
                   <span className="material-symbols-outlined text-[18px]">download</span>
                   <span>{downloadingPdf ? 'Generating...' : 'PDF'}</span>
                 </button>
-                <button
-                  onClick={handleShare}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-surface border border-white/10 text-sm font-bold text-slate-100 hover:bg-white/5 transition-colors"
-                >
+                <button onClick={handleShare}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-surface border border-white/10 text-sm font-bold text-slate-100 hover:bg-white/5 transition-colors">
                   <span className="material-symbols-outlined text-[18px]">{copying ? 'check' : 'share'}</span>
                   <span>{copying ? 'Copied!' : 'Share'}</span>
                 </button>
@@ -180,7 +184,7 @@ export default function SessionPage({ params }) {
             </div>
           </div>
 
-          {/* Share URL display */}
+          {/* ── Share URL ────────────────────────────────────────────── */}
           {shareUrl && (
             <div className="mb-8 p-4 rounded-xl border border-accent/30 bg-accent/5 flex items-center gap-3">
               <span className="material-symbols-outlined text-accent text-sm">link</span>
@@ -189,26 +193,60 @@ export default function SessionPage({ params }) {
             </div>
           )}
 
-          {/* Belief Cards */}
-          <div className="space-y-8 relative">
-            {/* Connecting line */}
-            <div className="absolute left-0 lg:left-1/2 top-0 bottom-0 w-px bg-gradient-to-b from-accent/50 via-accent/10 to-transparent hidden lg:block -translate-x-1/2" />
-
-            {beliefs.length === 0 ? (
-              <div className="text-center py-20">
-                <p className="text-slate-500">No beliefs found in this session.</p>
-              </div>
-            ) : (
-              beliefs.map((node, i) => (
-                <BeliefCard key={node.id || i} node={node} index={i} />
-              ))
-            )}
+          {/* ── Tab bar: Cards / Tree Map ─────────────────────────── */}
+          <div className="flex gap-1 p-1 rounded-xl bg-[#0d1117] border border-white/5 w-fit mb-8">
+            {[
+              { id: 'cards', label: 'Belief Cards', icon: 'grid_view' },
+              { id: 'tree',  label: 'Origin Tree',  icon: 'account_tree' },
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all"
+                style={{
+                  background: activeTab === tab.id ? 'rgba(129,140,248,0.12)' : 'transparent',
+                  border: activeTab === tab.id ? '1px solid rgba(129,140,248,0.3)' : '1px solid transparent',
+                  color: activeTab === tab.id ? '#818CF8' : '#475569',
+                }}
+              >
+                <span className="material-symbols-outlined text-[16px]">{tab.icon}</span>
+                {tab.label}
+              </button>
+            ))}
           </div>
 
-          {/* Session summary footer */}
+          {/* ── Cards view ───────────────────────────────────────────── */}
+          {activeTab === 'cards' && (
+            <div className="space-y-8 relative">
+              <div className="absolute left-0 lg:left-1/2 top-0 bottom-0 w-px bg-gradient-to-b from-accent/50 via-accent/10 to-transparent hidden lg:block -translate-x-1/2" />
+              {beliefs.length === 0 ? (
+                <div className="text-center py-20">
+                  <p className="text-slate-500">No beliefs found in this session.</p>
+                </div>
+              ) : (
+                beliefs.map((node, i) => (
+                  <BeliefCard key={node.id || i} node={node} index={i} />
+                ))
+              )}
+            </div>
+          )}
+
+          {/* ── Tree Map view ─────────────────────────────────────────── */}
+          {activeTab === 'tree' && (
+            <div className="rounded-2xl border border-white/5 bg-[#070a10] p-6 overflow-x-auto">
+              <BeliefTreeMap beliefs={beliefs} session={session} />
+            </div>
+          )}
+
+          {/* ── Cost Impact Panel (always visible below both tabs) ────── */}
+          {beliefs.length > 0 && (
+            <CostImpactPanel beliefs={beliefs} session={session} />
+          )}
+
+          {/* ── Session summary ──────────────────────────────────────── */}
           {session?.overall_emotional_tone && (
-            <div className="mt-12 p-6 lg:p-8 rounded-2xl border border-white/5 bg-card relative overflow-hidden group">
-              <div className="absolute inset-0 bg-gradient-to-br from-accent/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+            <div className="mt-8 p-6 lg:p-8 rounded-2xl border border-white/5 bg-card relative overflow-hidden group">
+              <div className="absolute inset-0 bg-gradient-to-br from-accent/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
               <h3 className="font-display text-lg font-bold text-slate-100 mb-3 relative z-10">Session Summary</h3>
               <div className="grid md:grid-cols-3 gap-4 text-sm relative z-10">
                 <div>
@@ -220,14 +258,14 @@ export default function SessionPage({ params }) {
                   <p className="text-slate-300 font-body capitalize">{session.overall_emotional_tone}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-accent uppercase tracking-widest mb-1">Total Cost</p>
+                  <p className="text-xs text-accent uppercase tracking-widest mb-1">Impact Scale</p>
                   <p className="text-slate-300 font-body">{session.estimated_total_cost || 'Significant'}</p>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Footer CTA */}
+          {/* ── Footer CTA ───────────────────────────────────────────── */}
           <div className="mt-16 text-center">
             <div className="max-w-xl mx-auto space-y-6">
               <div className="h-px w-full bg-gradient-to-r from-transparent via-white/10 to-transparent" />
@@ -248,6 +286,16 @@ export default function SessionPage({ params }) {
       <footer className="p-10 border-t border-white/5 text-center text-slate-600 text-xs relative z-10 mt-auto">
         © 2026 MindRoots Introspective Systems. All rights reserved.
       </footer>
+
+      {/* ── Narration / Documentary Modal ────────────────────────────── */}
+      {showNarration && (
+        <NarrationModal
+          beliefs={beliefs}
+          session={session}
+          narrationText={session?.narration_text || ''}
+          onClose={() => setShowNarration(false)}
+        />
+      )}
     </div>
   )
 }

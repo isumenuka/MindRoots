@@ -15,49 +15,73 @@ import {
 
 // ── Demo belief sets ─────────────────────────────────────────────────────────
 const BASE = [
-  {
-    belief: "I am only as valuable as my last achievement",
-    origin_person: "Father", origin_year: 1998, age_at_origin: 8,
-    origin_event: "Praise exclusively tied to academic performance",
-    still_serving: false, emotional_weight: "profound",
-    cost_today: "Chronic performance anxiety and inability to rest",
-    illustration_prompt: "A lone wooden school desk under harsh fluorescent light in an empty classroom, a single red-marked exam paper on the desk, late evening, dust particles in the beam, painterly memory aesthetic, no people",
+  { 
+    id: "belief_1",
+    belief: "I am only as valuable as my last achievement", 
+    origin_person: "Father", 
+    origin_year: 1995, 
+    still_serving: false, 
+    emotional_weight: "profound",
+    parent_id: null,
+    cost_today: "A soul-crushing inability to rest, chronic burnout, and high performance anxiety.",
+    written_analysis: "This core driver emerged from early childhood praise tied only to results. Today, it prevents you from feeling safe without constant external validation.",
+    narration_script: "You learned early on that love was earned, not given. This belief that you are only your last win keeps you on a treadmill that never stops.",
+    illustration_prompt: "A lone wooden school desk under harsh fluorescent light in an empty classroom, a single red-marked exam paper on the desk, late evening, dust particles in the beam, painterly memory aesthetic, no people"
   },
-  {
-    belief: "Showing vulnerability is weakness",
-    origin_person: "Mother", origin_year: 2001, age_at_origin: 11,
-    origin_event: "Told to stop crying and be strong after a loss",
-    still_serving: false, emotional_weight: "high",
-    cost_today: "Difficulty forming deep relationships or asking for help",
-    illustration_prompt: "A stone wall in the rain, a single crack with a tiny green shoot pushing through, moody overcast sky, painterly, cinematic, no people",
+  { 
+    id: "belief_2",
+    belief: "Showing vulnerability is weakness", 
+    origin_person: "Grandfather", 
+    origin_year: 1992, 
+    still_serving: true, 
+    emotional_weight: "high",
+    parent_id: null,
+    cost_today: "Fragmented relationships and an inability to connect deeply with even those you love most.",
+    written_analysis: "By suppressing 'soft' emotions to stay strong, you've accidentally built a wall around your heart that keeps the bad out, but the good too.",
+    narration_script: "You were taught that tears are a leak in the hull of a ship. But in trying to stay airtight, you've become isolated in your own strength.",
+    illustration_prompt: "A stone wall in the rain, a single crack with a tiny green shoot pushing through, moody overcast sky, painterly, cinematic, no people"
   },
-  {
-    belief: "I must earn love through self-sacrifice",
-    origin_person: "Older sibling", origin_year: 2005, age_at_origin: 15,
-    origin_event: "Putting others first to avoid conflict at home",
-    still_serving: false, emotional_weight: "profound",
-    cost_today: "Resentment, burnout, difficulty setting boundaries",
-    illustration_prompt: "An old kitchen table set for others, one empty chair at the head, a cold untouched meal, warm amber light from a window, painterly, no people",
+  { 
+    id: "belief_3",
+    belief: "I don't have true talent, I just work harder than others", 
+    origin_person: "Music Teacher", 
+    origin_year: 2003, 
+    still_serving: true, 
+    emotional_weight: "medium",
+    parent_id: "belief_1",
+    cost_today: "Imposter syndrome that makes every success feel like a lie waiting to be exposed.",
+    written_analysis: "Even when you succeed, this belief steals your joy, whispering that you've simply 'tricked' everyone through sheer effort.",
+    narration_script: "A single comment in a practice room grew into a shadow. Now, your hard work feels like a mask instead of a muscle.",
+    illustration_prompt: "A winding road uphill into fog at dusk, heavy backpack at the roadside, worn shoes, dramatic sky, painterly cinematic, no people"
   },
-  {
-    belief: "Success requires suffering",
-    origin_person: "Teachers", origin_year: 2007, age_at_origin: 17,
-    origin_event: "Rewarded only for pushing through pain or exhaustion",
-    still_serving: false, emotional_weight: "medium",
-    cost_today: "Inability to enjoy achievements or rest without guilt",
-    illustration_prompt: "A winding road uphill into fog at dusk, heavy backpack at the roadside, worn shoes, dramatic sky, painterly cinematic, no people",
+  { 
+    id: "belief_4",
+    belief: "I must stick to what is safe and predictable", 
+    origin_person: "Mother", 
+    origin_year: 1998, 
+    still_serving: true, 
+    emotional_weight: "low",
+    parent_id: "belief_3",
+    cost_today: "A life that feels like it's being lived in a cage of your own design. Safe, but stagnant.",
+    written_analysis: "Because you believe you have no inherent talent (Belief 3), you stay in the lines. This prevents you from ever discovering your true potential.",
+    narration_script: "You play it safe because you fear the mask will slip if you take a real risk. You stay in the shallow end, even though you crave the ocean.",
+    illustration_prompt: "An old house with boarded windows in a storm, shadow of a person inside, dark moody atmosphere, painterly, no people"
   },
 ]
-const DEMO_5 = [...BASE, {
-  belief: "The world is fundamentally unsafe",
-  origin_person: "Community", origin_year: 2003, age_at_origin: 13,
-  origin_event: "Witnessed unexpected loss and instability",
-  still_serving: false, emotional_weight: "high",
-  cost_today: "Hypervigilance, anxiety, difficulty trusting others",
-  illustration_prompt: "An old house with boarded windows in a storm, one light flickering inside, fallen tree in the yard, dark moody atmosphere, painterly, no people",
-}]
-
-const DEMO_4 = BASE.slice(0, 4)
+const DEMO_5 = [...BASE, { 
+    id: "belief_5",
+    belief: "Money is the only metric of security", 
+    origin_person: "The 2008 Recession", 
+    origin_year: 2008, 
+    still_serving: false, 
+    emotional_weight: "high",
+    parent_id: null,
+    cost_today: "A fear-based relationship with wealth that prevents you from spending on experiences and joy.",
+    written_analysis: "Born from global instability, this belief makes you hoard resources at the expense of presence and generosity.",
+    narration_script: "The world shook, and you decided that numbers on a screen were the only thing that could keep you upright.",
+    illustration_prompt: "A cold iron vault door slightly ajar in a flooded cellar, coins scattered on the wet stone floor, dim blue light, painterly, no people"
+  }]
+const DEMO_4 = BASE
 
 // ── Pipeline steps ────────────────────────────────────────────────────────────
 const STEPS = [
