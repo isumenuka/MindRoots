@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { use, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { auth, onAuthStateChanged, getSession, getBeliefs, generateShareToken } from '@/services/FirebaseService'
 import BeliefCard from '@/components/BeliefCard'
@@ -10,7 +10,7 @@ export default function SessionPage({ params }) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const uidParam = searchParams.get('uid')
-  const sessionId = params.sessionId
+  const { sessionId } = use(params)
 
   const [user, setUser] = useState(null)
   const [session, setSession] = useState(null)

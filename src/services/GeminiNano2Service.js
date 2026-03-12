@@ -11,15 +11,18 @@ async function generateBeliefIllustration(illustrationPrompt, apiKey) {
 
   try {
     const ai = new GoogleGenAI({ apiKey })
-    const interaction = await ai.interactions.create({
-      model: 'gemini-3.1-flash-image-preview',
-      input: fullPrompt
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-pro-image-preview',
+      contents: fullPrompt,
+      config: {
+        responseModalities: ['TEXT', 'IMAGE'],
+      },
     })
 
-    for (const output of interaction.outputs) {
-      if (output.type === 'image' && output.data) {
-        const mimeType = output.mimeType || 'image/jpeg'
-        return `data:${mimeType};base64,${output.data}`
+    for (const part of response.candidates?.[0]?.content?.parts ?? []) {
+      if (part.inlineData?.data) {
+        const mimeType = part.inlineData.mimeType || 'image/jpeg'
+        return `data:${mimeType};base64,${part.inlineData.data}`
       }
     }
     return null

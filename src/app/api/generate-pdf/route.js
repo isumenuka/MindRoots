@@ -1,59 +1,67 @@
 import { NextResponse } from 'next/server'
 
+function firestoreBase() {
+  const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID
+  return `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents`
+}
+function firebaseKey() { return process.env.NEXT_PUBLIC_FIREBASE_API_KEY }
+
+async function setStatus(uid, sessionId, status) {
+  const key = firebaseKey()
+  const base = firestoreBase()
+  const res = await fetch(
+    `${base}/users/${uid}/sessions/${sessionId}?key=${key}&updateMask.fieldPaths=status`,
+    {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fields: { status: { stringValue: status } } }),
+    }
+  )
+  if (!res.ok) console.error('[generate-pdf] setStatus failed:', res.status, await res.text())
+  else console.log(`[generate-pdf] Status → ${status}`)
+  return res.ok
+}
+
 export async function POST(request) {
+  let uid, sessionId, beliefTree
   try {
-    const { uid, sessionId, beliefTree } = await request.json()
+    const body = await request.json()
+    uid = body.uid
+    sessionId = body.sessionId
+    beliefTree = body.beliefTree || {}
+
     if (!uid || !sessionId) {
       return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
     }
 
-    const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'mindroots'
-    const firestoreBase = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents`
-    const apiKey = process.env.GEMINI_API_KEY
+    // Generate PDF
+    let pdfBytes = null
+    try {
+      const { default: generateBeliefPdf } = await import('@/services/PdfService')
+      pdfBytes = await generateBeliefPdf(beliefTree)
+      console.log('[generate-pdf] PDF generated successfully')
+    } catch (pdfErr) {
+      console.warn('[generate-pdf] PDF generation failed:', pdfErr.message)
+    }
 
-    // For local run: generate a simple PDF using React-PDF
-    // We dynamically import to avoid SSR issues
-    const { default: generateBeliefPdf } = await import('@/services/PdfService')
-    const pdfBytes = await generateBeliefPdf(beliefTree)
+    // Always mark complete regardless of PDF success
+    await setStatus(uid, sessionId, 'complete')
 
-    // In production: upload to GCS and save URL to Firestore
-    // Locally: update session status to 'complete' and return bytes directly
-
-    // Update session status to complete
-    await fetch(
-      `${firestoreBase}/users/${uid}/sessions/${sessionId}?key=${apiKey}&updateMask.fieldPaths=status`,
-      {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fields: { status: { stringValue: 'complete' } } }),
-      }
-    )
-
-    // Return PDF bytes as response
-    return new NextResponse(pdfBytes, {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="mindroots-${sessionId.slice(0, 8)}.pdf"`,
-        'Cache-Control': 'no-store',
-      },
-    })
+    if (pdfBytes) {
+      return new NextResponse(pdfBytes, {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/pdf',
+          'Content-Disposition': `attachment; filename="mindroots-${sessionId.slice(0, 8)}.pdf"`,
+          'Cache-Control': 'no-store',
+        },
+      })
+    }
+    return NextResponse.json({ success: true, pdfSkipped: true })
   } catch (err) {
-    console.error('[/api/generate-pdf]', err)
-    // Still mark as complete even if PDF generation fails
-    const { uid, sessionId } = await request.json().catch(() => ({}))
+    console.error('[/api/generate-pdf] FATAL:', err)
     if (uid && sessionId) {
-      const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'mindroots'
-      const firestoreBase = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents`
-      const apiKey = process.env.GEMINI_API_KEY
-      await fetch(
-        `${firestoreBase}/users/${uid}/sessions/${sessionId}?key=${apiKey}&updateMask.fieldPaths=status`,
-        {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ fields: { status: { stringValue: 'complete' } } }),
-        }
-      ).catch(() => {})
+      await setStatus(uid, sessionId, 'complete').catch(() => {})
     }
     return NextResponse.json({ error: err.message }, { status: 500 })
   }

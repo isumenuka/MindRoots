@@ -82,6 +82,12 @@ Write-Host "  Frontend + Admin : http://localhost:3000" -ForegroundColor Green
 Write-Host "  Admin Panel      : http://localhost:3000/admin" -ForegroundColor Green
 Write-Host "  Backend API      : http://localhost:8000" -ForegroundColor Yellow
 Write-Host "  Backend Docs     : http://localhost:8000/docs" -ForegroundColor Yellow
+Write-Host ""
+Write-Host "  ----------------------------------------" -ForegroundColor DarkGray
+Write-Host "  [DEMO] Skip interview, test full pipeline" -ForegroundColor Cyan
+Write-Host "  Demo Page        : http://localhost:3000/demo" -ForegroundColor Cyan
+Write-Host "  (Delete src/app/demo/ folder when done) " -ForegroundColor DarkGray
+Write-Host "  ----------------------------------------" -ForegroundColor DarkGray
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "  Close the opened terminal windows to stop the services." -ForegroundColor DarkGray
