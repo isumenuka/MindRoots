@@ -23,7 +23,7 @@ if not GEMINI_API_KEY:
 
 ADMIN_SECRET = os.environ.get("ADMIN_SECRET", "mindroots-admin-2025")
 
-LIVE_MODEL = "gemini-2.0-flash-exp"
+LIVE_MODEL = "gemini-2.5-flash-native-audio"
 
 # ─── Live config (mutable — updated by admin dashboard) ──
 live_config: dict = {
@@ -31,42 +31,19 @@ live_config: dict = {
     "voice": "Puck",
     "temperature": 1.0,
     "max_excavations": 5,
-    "enable_affective_dialog": False,
-    "enable_proactive_audio": False,
+    "enable_affective_dialog": True,
+    "enable_proactive_audio": True,
     "enable_google_grounding": False,
     "enable_input_transcription": True,
     "enable_output_transcription": True,
     "vad_start_sensitivity": "DEFAULT",   # DEFAULT | LOW | HIGH
     "vad_end_sensitivity": "DEFAULT",     # DEFAULT | LOW | HIGH
-    "vad_silence_duration_ms": 2000,
+    "vad_silence_duration_ms": 500,
     "vad_prefix_padding_ms": 500,
-    "system_prompt": None,  # None = use SOCRATIC_SYSTEM_PROMPT default
+    "system_prompt": "You are a helpful assistant. Be concise and friendly.",  # None = use SOCRATIC_SYSTEM_PROMPT default
 }
 
-SOCRATIC_SYSTEM_PROMPT = """You are the Socratic Interviewer — a deeply empathetic AI archaeologist who excavates the hidden origins of human beliefs.
-
-Your ONLY job is to ask layered "why" questions that peel back the surface of a stated belief until you reach the exact original moment, person, or event that first planted it.
-
-Rules:
-- NEVER accept a surface-level answer. Always ask "Why?" or "Who?" or "When was the very first time you felt this?"
-- Keep asking until you identify: (1) the specific belief, (2) who planted it, (3) the exact memory/event, (4) approximate year, (5) whether the user thinks it still serves them.
-- Speak naturally and warmly — like a wise therapist, not a chatbot.
-- When you have hit bedrock (the root origin), say exactly: "I think we've found it. Let me capture this belief now."
-- Conduct a maximum of 5 belief excavations per session.
-- After completing all excavations, say exactly: "Your belief map is now being drawn. This will take about 30 seconds."
-- Start by warmly greeting the user and asking them to share a belief or thought pattern about themselves that they feel might be holding them back.
-
-After each excavation, silently format a JSON node in your internal analysis (do not read aloud):
-BELIEF_NODE: {
-  "belief": "string",
-  "origin_person": "string",
-  "origin_event": "string",
-  "origin_year": number,
-  "age_at_origin": number,
-  "still_serving": boolean,
-  "emotional_weight": "low | medium | high | profound",
-  "cost_today": "string"
-}"""
+SOCRATIC_SYSTEM_PROMPT = """You are a helpful assistant. Be concise and friendly."""
 
 # ─── Gemini client ──────────────────────────────────────────────────────────
 client = genai.Client(
