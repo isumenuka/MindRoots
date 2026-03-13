@@ -21,7 +21,7 @@ export default function OnboardingPage() {
       setUser(u)
       const doc = await getUserDoc(u.uid)
       if (doc?.onboarding_complete) {
-        router.push('/interview')
+        router.push('/history')
       }
     })
     return () => unsub()
@@ -35,9 +35,11 @@ export default function OnboardingPage() {
     try {
       await markOnboardingComplete(user.uid)
       setOnboardingComplete(true)
-      router.push('/interview')
+      router.push('/history')
     } catch (e) {
-      console.error(e)
+      console.error('Onboarding finish failed:', e)
+      // Still navigate even if the DB write failed — don't block the user
+      router.push('/history')
     }
   }
 

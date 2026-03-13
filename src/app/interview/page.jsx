@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useRef, useCallback } from 'react'
+import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import { auth, onAuthStateChanged, createSession, saveBelief, updateSessionStatus } from '@/services/FirebaseService'
@@ -25,7 +26,9 @@ export default function InterviewPage() {
   const [showTextInput, setShowTextInput] = useState(false)
   const [textInput, setTextInput] = useState('')
   const [micError, setMicError] = useState(null)
+  const [connectionError, setConnectionError] = useState(null) // null | 'session_failed' | 'timeout' | string
   const [transcriptScrollRef] = useState(() => ({ current: null }))
+  const connectionTimerRef = useRef(null)
   const textInputRef = useRef(null)
 
   const liveServiceRef = useRef(null)
@@ -59,8 +62,22 @@ export default function InterviewPage() {
 
       clearTranscript()
 
+      // Start 30s connection timeout
+      connectionTimerRef.current = setTimeout(() => {
+        setConnectionError('timeout')
+      }, 30000)
+
       // Create Firestore session
-      const sid = await createSession(user.uid)
+      let sid
+      try {
+        sid = await createSession(user.uid)
+      } catch (err) {
+        console.error('[Interview] Failed to create session:', err)
+        liveServiceRef.current = null
+        clearTimeout(connectionTimerRef.current)
+        setConnectionError('session_failed')
+        return
+      }
       if (cancelled) { liveServiceRef.current = null; return }
       setLocalSessionId(sid)
       setSessionId(sid)
@@ -126,12 +143,14 @@ export default function InterviewPage() {
 
       svc.onError = (e) => {
         console.error('[Interview] Session error:', e)
-        setAgentStatus('connecting')
+        clearTimeout(connectionTimerRef.current)
+        setConnectionError(typeof e === 'string' ? e : e?.message || 'Connection lost')
       }
 
       try {
         await svc.startSession()
         if (cancelled) { svc.endSession(); liveServiceRef.current = null; return }
+        clearTimeout(connectionTimerRef.current)  // Connected — cancel timeout
         liveServiceRef.current = svc
         setAgentStatus('active')
 
@@ -156,6 +175,7 @@ export default function InterviewPage() {
     return () => {
       cancelled = true
       sessionCreatedRef.current = false
+      clearTimeout(connectionTimerRef.current)
     }
   }, [user])
 
@@ -219,6 +239,14 @@ export default function InterviewPage() {
   }
 
   const currentAnalyser = agentStatus === 'speaking' ? getPlayerAnalyser() : getMicAnalyser()
+
+  const handleRetryConnection = () => {
+    setConnectionError(null)
+    sessionCreatedRef.current = false
+    liveServiceRef.current = null
+    // Re-trigger init by clearing the guard
+    window.location.reload()
+  }
 
   return (
     <div className="min-h-screen bg-[#0A0A0A] text-white flex flex-col font-inter">
@@ -428,6 +456,53 @@ export default function InterviewPage() {
           )}
         </AnimatePresence>
       </footer>
+
+      {/* ── Connection Error Overlay ── */}
+      {connectionError && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-6">
+          <div className="w-full max-w-sm bg-[#111118] border border-white/10 rounded-2xl p-8 text-center shadow-2xl">
+            <div className="w-14 h-14 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto mb-5">
+              <span className="material-symbols-outlined text-red-400 text-3xl">
+                {connectionError === 'timeout' ? 'timer_off' : 'wifi_off'}
+              </span>
+            </div>
+            <h3 className="font-display text-xl font-bold text-white mb-2">
+              {connectionError === 'timeout' ? 'Connection timed out' :
+               connectionError === 'session_failed' ? 'Couldn\'t start session' :
+               'Connection lost'}
+            </h3>
+            <p className="text-slate-400 text-sm leading-relaxed mb-7">
+              {connectionError === 'timeout'
+                ? 'Could not connect to your guide within 30 seconds. Check your internet and try again.'
+                : connectionError === 'session_failed'
+                ? 'Failed to create your session. This could be a network issue — please try again.'
+                : `An error occurred: ${connectionError}`}
+            </p>
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={handleRetryConnection}
+                className="w-full py-3 bg-[#818CF8] text-white font-bold text-sm rounded-xl hover:bg-[#818CF8]/90 transition-colors flex items-center justify-center gap-2 shadow-lg shadow-[#818CF8]/20"
+              >
+                <span className="material-symbols-outlined text-[18px]">refresh</span>
+                Retry Session
+              </button>
+              <Link
+                href="/history"
+                className="w-full py-3 bg-white/5 border border-white/10 text-slate-200 font-semibold text-sm rounded-xl hover:bg-white/10 transition-colors flex items-center justify-center gap-2"
+              >
+                <span className="material-symbols-outlined text-[18px]">folder_open</span>
+                Go to Dashboard
+              </Link>
+              <Link
+                href="/"
+                className="text-slate-600 hover:text-slate-400 transition-colors text-xs font-medium"
+              >
+                Return to Home
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* End Session Confirm Modal */}
       {showEndConfirm && (

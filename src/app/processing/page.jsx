@@ -1,7 +1,8 @@
 'use client'
-import { useEffect, useState, Suspense } from 'react'
+import { useEffect, useState, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { auth, onAuthStateChanged } from '@/services/FirebaseService'
+import Link from 'next/link'
 import useFirestoreListener from '@/hooks/useFirestoreListener'
 import AppLogo from '@/components/AppLogo'
 
@@ -111,12 +112,23 @@ function ProcessingContent() {
   const statusLabel = STATUS_LABEL[status] || 'Processing…'
   const currentStatusIdx = STATUS_ORDER.indexOf(status)
 
-  // Animate progress from 0 on mount / change
   const [displayProgress, setDisplayProgress] = useState(0)
+  const [isStuck, setIsStuck] = useState(false)
+  const stuckTimerRef = useRef(null)
+
+  // Animate progress
   useEffect(() => {
     const t = setTimeout(() => setDisplayProgress(progress), 120)
     return () => clearTimeout(t)
   }, [progress])
+
+  // Stuck-state detection: if status hasn’t changed to complete in 5 min, show escape hatch
+  useEffect(() => {
+    if (status === 'complete') { clearTimeout(stuckTimerRef.current); return }
+    clearTimeout(stuckTimerRef.current)
+    stuckTimerRef.current = setTimeout(() => setIsStuck(true), 5 * 60 * 1000)
+    return () => clearTimeout(stuckTimerRef.current)
+  }, [status])
 
   return (
     <div className="min-h-screen bg-[#0A0A0A] flex flex-col relative overflow-hidden font-inter">
@@ -256,6 +268,35 @@ function ProcessingContent() {
               />
             </div>
           </div>
+
+          {/* Stuck escape hatch — appears after 5 min */}
+          {isStuck && status !== 'complete' && (
+            <div className="mt-6 p-5 border border-amber-400/20 rounded-xl bg-amber-400/[0.04] space-y-4">
+              <div className="flex items-center gap-2 text-amber-400">
+                <span className="material-symbols-outlined text-[20px]">schedule</span>
+                <p className="font-semibold text-sm">This is taking longer than expected</p>
+              </div>
+              <p className="text-slate-400 text-sm leading-relaxed">
+                Our AI pipeline may be experiencing delays. You can wait, or navigate away and check back later — your session is saved.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3">
+                {sessionId && uid && (
+                  <Link
+                    href={`/session/${sessionId}?uid=${uid}`}
+                    className="flex-1 text-center px-5 py-2.5 bg-white text-black font-bold text-sm rounded-xl hover:bg-slate-100 transition-colors"
+                  >
+                    View Map Anyway
+                  </Link>
+                )}
+                <Link
+                  href="/history"
+                  className="flex-1 text-center px-5 py-2.5 bg-white/5 border border-white/10 text-slate-200 font-semibold text-sm rounded-xl hover:bg-white/10 transition-colors"
+                >
+                  Go to Dashboard
+                </Link>
+              </div>
+            </div>
+          )}
 
           {/* Completion CTA */}
           {status === 'complete' && sessionId && uid && (

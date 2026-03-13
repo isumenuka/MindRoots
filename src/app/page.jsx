@@ -31,10 +31,10 @@ export default function LandingPage() {
         if (userDoc && !userDoc.onboarding_complete) {
           router.push('/onboarding')
         } else {
-          router.push('/interview')
+          router.push('/history')
         }
       } catch {
-        router.push('/interview')
+        router.push('/history')
       }
       return;
     }
@@ -48,7 +48,7 @@ export default function LandingPage() {
       if (userDoc && !userDoc.onboarding_complete) {
         router.push('/onboarding')
       } else {
-        router.push('/interview')
+        router.push('/history')
       }
     } catch (err) {
       console.error(err)
