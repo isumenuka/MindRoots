@@ -61,11 +61,17 @@ export default function AppSidebar({ user, activeTab, onTabChange, onSignOut, si
         </Link>
 
         {/* Insights */}
-        <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 text-sm font-medium cursor-not-allowed select-none">
+        <Link
+          href="/insights"
+          className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-sm font-medium ${
+            pathname === '/insights'
+              ? 'bg-[#818CF8]/15 text-[#818CF8]'
+              : 'text-slate-400 hover:bg-white/5 hover:text-slate-100'
+          }`}
+        >
           <span className="material-symbols-outlined text-[20px]">insights</span>
           <span>Insights</span>
-          <span className="ml-auto text-[9px] font-bold uppercase tracking-wider bg-white/5 border border-white/10 text-slate-500 px-1.5 py-0.5 rounded">Soon</span>
-        </div>
+        </Link>
 
         <div className="pt-3 pb-1">
           <p className="px-3 text-[10px] font-bold uppercase tracking-widest text-slate-600">Account</p>
