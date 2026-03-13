@@ -1,17 +1,37 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { auth, onAuthStateChanged, signOut, getSessions } from '@/services/FirebaseService'
+import { auth, onAuthStateChanged, signOut, getSessions, deleteSession } from '@/services/FirebaseService'
 import useAppStore from '@/store/useAppStore'
 import AppSidebar from '@/components/AppSidebar'
 
+// Generate a unique readable title from session data when dominant_theme is blank
+function sessionTitle(s) {
+  if (s.dominant_theme && s.dominant_theme.trim()) return s.dominant_theme.trim()
+  // Fallback: make it unique using the date + last 5 chars of session ID
+  const date = s.created_at?.toDate?.()?.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) || ''
+  const shortId = s.id ? s.id.slice(-5).toUpperCase() : ''
+  return date ? `Excavation · ${date} · #${shortId}` : `Excavation #${shortId}`
+}
+
+const TONE_COLORS = {
+  guarded:    { bg: 'rgba(129,140,248,0.12)', border: 'rgba(129,140,248,0.35)', text: '#818CF8' },
+  anxious:    { bg: 'rgba(248,113,113,0.12)', border: 'rgba(248,113,113,0.35)', text: '#f87171' },
+  sad:        { bg: 'rgba(96,165,250,0.12)',  border: 'rgba(96,165,250,0.35)',  text: '#60a5fa' },
+  reflective: { bg: 'rgba(250,204,21,0.12)',  border: 'rgba(250,204,21,0.35)', text: '#facc15' },
+  hopeful:    { bg: 'rgba(74,222,128,0.12)',  border: 'rgba(74,222,128,0.35)', text: '#4ade80' },
+}
+
 export default function HistoryPage() {
-  const router = useRouter()
+  const router       = useRouter()
   const storeSetUser = useAppStore(s => s.setUser)
-  const [user, setUser] = useState(null)
-  const [sessions, setSessions] = useState([])
-  const [loading, setLoading] = useState(true)
+
+  const [user,       setUser]       = useState(null)
+  const [sessions,   setSessions]   = useState([])
+  const [loading,    setLoading]    = useState(true)
   const [signingOut, setSigningOut] = useState(false)
+  const [deletingId, setDeletingId] = useState(null)   // session id being deleted
+  const [confirmId,  setConfirmId]  = useState(null)   // session id awaiting confirm
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
@@ -38,6 +58,19 @@ export default function HistoryPage() {
     }
   }
 
+  const handleDelete = async (sessionId, e) => {
+    e.stopPropagation()
+    setDeletingId(sessionId)
+    try {
+      await deleteSession(user.uid, sessionId)
+      setSessions(prev => prev.filter(s => s.id !== sessionId))
+    } catch (err) {
+      console.error('[Delete session]', err)
+    }
+    setDeletingId(null)
+    setConfirmId(null)
+  }
+
   return (
     <div className="flex h-screen w-full overflow-hidden bg-[#0A0A0A] text-slate-100 font-sans relative">
       {/* Ambient background */}
@@ -46,24 +79,24 @@ export default function HistoryPage() {
         <div className="absolute bottom-[-20%] left-[-10%] w-[40%] h-[40%] bg-[#818CF8]/4 blur-[120px] rounded-full" />
       </div>
 
-      {/* Shared sidebar */}
+      {/* Sidebar */}
       <AppSidebar user={user} onSignOut={handleSignOut} signingOut={signingOut} />
 
       {/* Mobile top bar */}
       <div className="md:hidden absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-5 h-14 border-b border-white/5 bg-[#0A0A0A]/90 backdrop-blur-xl">
         <span className="font-display font-bold text-white text-lg">History</span>
         <button onClick={() => router.push('/settings')} className="w-9 h-9 rounded-full overflow-hidden border border-white/10 flex items-center justify-center bg-white/5">
-          {user?.photoURL ? (
-            <img src={user.photoURL} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-          ) : (
-            <span className="material-symbols-outlined text-[18px] text-slate-400">person</span>
-          )}
+          {user?.photoURL
+            ? <img src={user.photoURL} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+            : <span className="material-symbols-outlined text-[18px] text-slate-400">person</span>
+          }
         </button>
       </div>
 
       {/* Main content */}
       <main className="flex-1 overflow-y-auto relative z-10 pt-14 md:pt-0">
         <div className="max-w-[1400px] mx-auto px-4 lg:px-8 py-8 md:py-10">
+
           {/* Header */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-10">
             <div>
@@ -102,25 +135,73 @@ export default function HistoryPage() {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
               {sessions.map((s) => {
-                const date = s.created_at?.toDate?.()?.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) || 'Unknown'
+                const date    = s.created_at?.toDate?.()?.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) || 'Unknown'
+                const title   = sessionTitle(s)
+                const tone    = s.overall_emotional_tone?.toLowerCase()
+                const toneCfg = TONE_COLORS[tone] || TONE_COLORS.guarded
+                const isDeleting = deletingId === s.id
+                const isConfirm  = confirmId  === s.id
+
                 return (
                   <div
                     key={s.id}
-                    onClick={() => router.push(`/session/${s.id}?uid=${user.uid}`)}
-                    className="group bg-white/[0.03] border border-white/10 rounded-2xl overflow-hidden hover:border-[#818CF8]/40 hover:bg-white/[0.05] transition-all duration-300 cursor-pointer flex flex-col"
+                    onClick={() => !isConfirm && router.push(`/session/${s.id}?uid=${user.uid}`)}
+                    className="group relative bg-white/[0.03] border border-white/10 rounded-2xl overflow-hidden hover:border-[#818CF8]/40 hover:bg-white/[0.05] transition-all duration-300 cursor-pointer flex flex-col"
                   >
-                    {/* Card accent bar */}
+                    {/* Accent bar */}
                     <div className="h-1 w-full bg-gradient-to-r from-[#818CF8] to-purple-500 opacity-60 group-hover:opacity-100 transition-opacity" />
 
-                    <div className="p-6 flex flex-col gap-4 grow">
-                      {s.overall_emotional_tone && (
-                        <span className="self-start px-2.5 py-1 bg-[#818CF8]/15 border border-[#818CF8]/30 text-[#818CF8] text-[10px] font-bold uppercase tracking-wider rounded-full">
-                          {s.overall_emotional_tone}
-                        </span>
-                      )}
+                    <div className="p-6 flex flex-col gap-3 grow">
+                      {/* Top row: tone badge + delete button */}
+                      <div className="flex items-start justify-between gap-2">
+                        {tone ? (
+                          <span
+                            className="px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider rounded-full border"
+                            style={{ background: toneCfg.bg, borderColor: toneCfg.border, color: toneCfg.text }}
+                          >
+                            {s.overall_emotional_tone}
+                          </span>
+                        ) : <span />}
+
+                        {/* Delete button */}
+                        {!isConfirm ? (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setConfirmId(s.id) }}
+                            className="opacity-0 group-hover:opacity-100 transition-opacity w-8 h-8 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 hover:bg-red-500/20 hover:text-red-300 shrink-0"
+                            title="Delete session"
+                          >
+                            <span className="material-symbols-outlined text-[16px]">delete</span>
+                          </button>
+                        ) : (
+                          /* Confirm row */
+                          <div
+                            className="flex items-center gap-1.5 ml-auto"
+                            onClick={e => e.stopPropagation()}
+                          >
+                            <span className="text-[11px] text-red-400 font-semibold mr-1">Delete?</span>
+                            <button
+                              onClick={(e) => handleDelete(s.id, e)}
+                              disabled={isDeleting}
+                              className="px-2.5 py-1 rounded-lg bg-red-500 text-white text-[11px] font-bold hover:bg-red-600 transition-colors disabled:opacity-50"
+                            >
+                              {isDeleting ? '…' : 'Yes'}
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setConfirmId(null) }}
+                              className="px-2.5 py-1 rounded-lg bg-white/10 text-slate-300 text-[11px] font-bold hover:bg-white/20 transition-colors"
+                            >
+                              No
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Title */}
                       <h3 className="text-slate-100 text-lg font-display font-bold group-hover:text-[#818CF8] transition-colors line-clamp-2 leading-snug">
-                        {s.dominant_theme || 'Belief Excavation Session'}
+                        {title}
                       </h3>
+
+                      {/* Footer */}
                       <div className="flex items-center justify-between mt-auto pt-3 border-t border-white/5 text-xs text-slate-500">
                         <span>{date}</span>
                         <span>{s.total_beliefs || '?'} beliefs</span>

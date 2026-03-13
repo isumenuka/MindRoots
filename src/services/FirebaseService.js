@@ -149,6 +149,17 @@ async function deleteAllUserData(uid) {
   await deleteDoc(doc(db, 'users', uid))
 }
 
+async function deleteSession(uid, sessionId) {
+  // Delete all beliefs in the session first
+  const beliefsRef = collection(db, 'users', uid, 'sessions', sessionId, 'beliefs')
+  const beliefsSnap = await getDocs(beliefsRef)
+  for (const beliefDoc of beliefsSnap.docs) {
+    await deleteDoc(beliefDoc.ref)
+  }
+  // Delete the session document
+  await deleteDoc(doc(db, 'users', uid, 'sessions', sessionId))
+}
+
 async function markOnboardingComplete(uid) {
   const userRef = doc(db, 'users', uid)
   await updateDoc(userRef, { onboarding_complete: true })
@@ -165,7 +176,7 @@ export {
   signInWithGoogle, signOut,
   createSession, updateSessionStatus, saveBelief, updateBelief,
   saveBeliefTree, getBeliefTree, getBeliefs, getSessions, getSession,
-  generateShareToken, getShareData, deleteAllUserData,
+  generateShareToken, getShareData, deleteAllUserData, deleteSession,
   markOnboardingComplete, getUserDoc,
   onAuthStateChanged,
   onSnapshot, doc, collection,
