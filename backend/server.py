@@ -40,10 +40,21 @@ live_config: dict = {
     "vad_end_sensitivity": "DEFAULT",     # DEFAULT | LOW | HIGH
     "vad_silence_duration_ms": 500,
     "vad_prefix_padding_ms": 500,
-    "system_prompt": "You are a helpful assistant. Be concise and friendly.",  # None = use SOCRATIC_SYSTEM_PROMPT default
+    "system_prompt": None,  # None = use instructions.md dynamically
 }
 
-SOCRATIC_SYSTEM_PROMPT = """You are a helpful assistant. Be concise and friendly."""
+def get_system_prompt():
+    """Reads instructions from instructions.md or returns a default fallback."""
+    instructions_path = os.path.join(os.path.dirname(__file__), "instructions.md")
+    if os.path.exists(instructions_path):
+        try:
+            with open(instructions_path, "r", encoding="utf-8") as f:
+                content = f.read().strip()
+                if content:
+                    return content
+        except Exception as e:
+            print(f"Error reading instructions file: {e}")
+    return "You are a helpful assistant. Be concise and friendly."
 
 # ─── Gemini client ──────────────────────────────────────────────────────────
 client = genai.Client(
@@ -58,6 +69,9 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",
+        "http://localhost:3001",
+        "http://localhost:3002",
+        "http://127.0.0.1:3000",
         os.environ.get("NEXT_PUBLIC_APP_URL", "http://localhost:3000"),
     ],
     allow_credentials=True,
@@ -86,7 +100,13 @@ class ConfigUpdate(BaseModel):
 @app.get("/api/config")
 async def get_config():
     """Return current live config."""
-    return {**live_config, "default_system_prompt": SOCRATIC_SYSTEM_PROMPT[:200] + "..."}
+    config_out = dict(live_config)
+    # If system_prompt hasn't been set by admin, or if it matches the fallback, read it from file
+    if not config_out.get("system_prompt"):
+        config_out["system_prompt"] = get_system_prompt()
+    
+    config_out["default_system_prompt"] = get_system_prompt()[:200] + "..."
+    return config_out
 
 
 @app.post("/api/config")

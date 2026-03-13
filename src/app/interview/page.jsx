@@ -159,8 +159,8 @@ export default function InterviewPage() {
 
         // Start capturing mic and sending audio
         await startMic(
-          (pcm16) => svc.sendAudio(pcm16),
-          () => svc.sendAudioStreamEnd()  // flush Gemini VAD on mic stop
+          (pcm16) => svc?.sendAudio?.(pcm16),
+          () => svc?.sendAudioStreamEnd?.()  // flush Gemini VAD on mic stop
         )
       } catch (err) {
         console.error('[Interview] Failed to start:', err)
@@ -388,8 +388,8 @@ export default function InterviewPage() {
             onClick={() => isCapturing
               ? stopMic()
               : startMic(
-                  (pcm16) => liveServiceRef.current?.sendAudio(pcm16),
-                  () => liveServiceRef.current?.sendAudioStreamEnd()
+                  (pcm16) => liveServiceRef.current?.sendAudio?.(pcm16),
+                  () => liveServiceRef.current?.sendAudioStreamEnd?.()
                 )}
             className={`size-14 rounded-full flex items-center justify-center hover:scale-105 transition-transform ${
               isCapturing ? 'bg-white text-[#0A0A0A]' : 'bg-white/5 border border-white/10 text-white hover:bg-white/10'
