@@ -234,23 +234,6 @@ export default function AdminPage() {
           {/* Gemini Behavior */}
           <Section title="Gemini Behavior" icon="psychology">
             <div>
-              <Label>Voice</Label>
-              <div className="grid grid-cols-4 gap-2">
-                {VOICES.map(v => (
-                  <button
-                    key={v}
-                    onClick={() => set('voice', v)}
-                    className={`px-3 py-2 rounded-xl text-sm font-medium transition-all ${cfg.voice === v
-                      ? 'bg-[#818CF8]/25 border border-[#818CF8]/60 text-[#818CF8]'
-                      : 'bg-white/5 border border-white/10 text-slate-400 hover:text-slate-200 hover:bg-white/10'}`}
-                  >
-                    {v}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div>
               <Label hint={`${parseFloat(cfg.temperature).toFixed(1)} — Higher = more creative`}>
                 Temperature: {parseFloat(cfg.temperature).toFixed(1)}
               </Label>

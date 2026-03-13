@@ -1,22 +1,36 @@
 'use client'
 import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { auth, onAuthStateChanged, signOut, deleteAllUserData, getUserDoc } from '@/services/FirebaseService'
+import { auth, onAuthStateChanged, signOut, deleteAllUserData, getUserDoc, updateUserVoice } from '@/services/FirebaseService'
 import useAppStore from '@/store/useAppStore'
 import AppSidebar from '@/components/AppSidebar'
 
+const VOICES = [
+  { name: 'Aoede',  desc: 'Warm & storytelling',   tone: 'Expressive' },
+  { name: 'Charon', desc: 'Deep & grounded',        tone: 'Grounded'   },
+  { name: 'Fenrir', desc: 'Bold & direct',           tone: 'Bold'       },
+  { name: 'Kore',   desc: 'Bright & clear',          tone: 'Clear'      },
+  { name: 'Puck',   desc: 'Lively & friendly',       tone: 'Friendly'   },
+  { name: 'Orbit',  desc: 'Smooth & composed',       tone: 'Smooth'     },
+  { name: 'Zephyr', desc: 'Airy & gentle',           tone: 'Gentle'     },
+  { name: 'Leda',   desc: 'Soft & empathetic',       tone: 'Empathetic' },
+]
+
 function SettingsInner() {
-  const router = useRouter()
+  const router       = useRouter()
   const searchParams = useSearchParams()
   const storeSetUser = useAppStore(s => s.setUser)
-  const [user, setUser] = useState(null)
-  const [userDoc, setUserDoc] = useState(null)
-  const [activeTab, setActiveTab] = useState('profile')
-  const [deleting, setDeleting] = useState(false)
-  const [deleteConfirm, setDeleteConfirm] = useState(false)
-  const [signingOut, setSigningOut] = useState(false)
 
-  // Support ?tab=privacy deep-link from sidebar
+  const [user,          setUser]          = useState(null)
+  const [userDoc,       setUserDoc]       = useState(null)
+  const [activeTab,     setActiveTab]     = useState('profile')
+  const [deleting,      setDeleting]      = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState(false)
+  const [signingOut,    setSigningOut]    = useState(false)
+  const [selectedVoice, setSelectedVoice] = useState('Puck')
+  const [savingVoice,   setSavingVoice]   = useState(false)
+  const [voiceSaved,    setVoiceSaved]    = useState(false)
+
   useEffect(() => {
     const tab = searchParams.get('tab')
     if (tab === 'privacy' || tab === 'profile') setActiveTab(tab)
@@ -26,7 +40,11 @@ function SettingsInner() {
     const unsub = onAuthStateChanged(auth, async (u) => {
       if (!u) { router.push('/'); return }
       setUser(u)
-      try { setUserDoc(await getUserDoc(u.uid)) } catch {}
+      try {
+        const doc = await getUserDoc(u.uid)
+        setUserDoc(doc)
+        if (doc?.preferred_voice) setSelectedVoice(doc.preferred_voice)
+      } catch {}
     })
     return () => unsub()
   }, [router])
@@ -57,7 +75,20 @@ function SettingsInner() {
     }
   }
 
-  if (!user) return null;
+  const handleSaveVoice = async () => {
+    if (!user) return
+    setSavingVoice(true)
+    try {
+      await updateUserVoice(user.uid, selectedVoice)
+      setVoiceSaved(true)
+      setTimeout(() => setVoiceSaved(false), 2500)
+    } catch (e) {
+      console.error(e)
+    }
+    setSavingVoice(false)
+  }
+
+  if (!user) return null
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-[#0A0A0A] font-sans relative">
@@ -67,16 +98,10 @@ function SettingsInner() {
         <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-[#818CF8]/5 blur-[140px] rounded-full" />
       </div>
 
-      {/* Shared sidebar */}
-      <AppSidebar
-        user={user}
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        onSignOut={handleSignOut}
-        signingOut={signingOut}
-      />
+      {/* Sidebar */}
+      <AppSidebar user={user} activeTab={activeTab} onTabChange={setActiveTab} onSignOut={handleSignOut} signingOut={signingOut} />
 
-      {/* Main Content */}
+      {/* Main */}
       <main className="flex-1 overflow-y-auto relative z-10">
         {/* Top bar */}
         <header className="h-14 flex items-center justify-between px-4 lg:px-8 border-b border-white/5 sticky top-0 bg-[#0A0A0A]/80 backdrop-blur-xl z-20">
@@ -85,20 +110,13 @@ function SettingsInner() {
             <span className="material-symbols-outlined text-[14px]">chevron_right</span>
             <span className="text-slate-200 capitalize">{activeTab}</span>
           </div>
-          {/* Mobile tab switcher */}
           <div className="flex md:hidden gap-2">
-            <button
-              onClick={() => setActiveTab('profile')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${activeTab === 'profile' ? 'bg-[#818CF8]/20 text-[#818CF8]' : 'text-slate-500 hover:text-slate-300'}`}
-            >
-              Profile
-            </button>
-            <button
-              onClick={() => setActiveTab('privacy')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${activeTab === 'privacy' ? 'bg-[#818CF8]/20 text-[#818CF8]' : 'text-slate-500 hover:text-slate-300'}`}
-            >
-              Privacy
-            </button>
+            {['profile', 'privacy'].map(t => (
+              <button key={t} onClick={() => setActiveTab(t)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors capitalize ${activeTab === t ? 'bg-[#818CF8]/20 text-[#818CF8]' : 'text-slate-500 hover:text-slate-300'}`}>
+                {t}
+              </button>
+            ))}
           </div>
         </header>
 
@@ -107,21 +125,16 @@ function SettingsInner() {
           {/* ── PROFILE TAB ── */}
           {activeTab === 'profile' && (
             <div className="space-y-10 animate-in fade-in slide-in-from-bottom-3 duration-300">
+
               {/* Avatar + Name */}
               <div className="flex items-center gap-6">
                 <div className="relative shrink-0">
                   <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#818CF8] to-purple-600 p-[2px]">
                     <div className="w-full h-full rounded-full bg-[#0A0A0A] flex items-center justify-center overflow-hidden">
-                      {user?.photoURL ? (
-                        <img
-                          alt={user?.displayName || 'Avatar'}
-                          className="w-full h-full object-cover"
-                          src={user.photoURL}
-                          referrerPolicy="no-referrer"
-                        />
-                      ) : (
-                        <span className="material-symbols-outlined text-3xl text-slate-500">person</span>
-                      )}
+                      {user?.photoURL
+                        ? <img alt={user?.displayName || 'Avatar'} className="w-full h-full object-cover" src={user.photoURL} referrerPolicy="no-referrer" />
+                        : <span className="material-symbols-outlined text-3xl text-slate-500">person</span>
+                      }
                     </div>
                   </div>
                 </div>
@@ -150,6 +163,83 @@ function SettingsInner() {
                 </div>
               </div>
 
+              {/* ── Voice Preferences ── */}
+              <div className="pt-2">
+                <div className="flex items-center gap-3 mb-2">
+                  <span className="material-symbols-outlined text-[#818CF8] text-[20px]">graphic_eq</span>
+                  <h2 className="font-display text-lg font-bold text-white">Voice Preferences</h2>
+                </div>
+                <p className="text-slate-500 text-sm mb-6 leading-relaxed">
+                  Choose the voice your AI therapist speaks with during sessions. Each voice has a distinct character and tone.
+                </p>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+                  {VOICES.map(v => {
+                    const isSelected = selectedVoice === v.name
+                    return (
+                      <button
+                        key={v.name}
+                        onClick={() => setSelectedVoice(v.name)}
+                        className={`relative flex flex-col items-start gap-1.5 p-4 rounded-2xl border text-left transition-all duration-200 group
+                          ${isSelected
+                            ? 'bg-[#818CF8]/15 border-[#818CF8]/60 shadow-lg shadow-[#818CF8]/10'
+                            : 'bg-white/[0.03] border-white/10 hover:bg-white/[0.06] hover:border-white/20'}`}
+                      >
+                        {/* Selected check */}
+                        {isSelected && (
+                          <div className="absolute top-3 right-3 w-5 h-5 rounded-full bg-[#818CF8] flex items-center justify-center">
+                            <span className="material-symbols-outlined text-white text-[13px]">check</span>
+                          </div>
+                        )}
+
+                        {/* Sound wave icon */}
+                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center mb-0.5 transition-colors
+                          ${isSelected ? 'bg-[#818CF8]/25' : 'bg-white/5 group-hover:bg-white/10'}`}>
+                          <span className={`material-symbols-outlined text-[18px] ${isSelected ? 'text-[#818CF8]' : 'text-slate-500'}`}>
+                            record_voice_over
+                          </span>
+                        </div>
+
+                        <p className={`font-display font-bold text-base ${isSelected ? 'text-[#818CF8]' : 'text-slate-200'}`}>
+                          {v.name}
+                        </p>
+                        <p className="text-slate-500 text-xs leading-snug">{v.desc}</p>
+                        <span className={`mt-1 text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full border
+                          ${isSelected
+                            ? 'bg-[#818CF8]/20 border-[#818CF8]/40 text-[#818CF8]'
+                            : 'bg-white/5 border-white/10 text-slate-500'}`}>
+                          {v.tone}
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+
+                {/* Save button */}
+                <div className="flex items-center gap-4">
+                  <button
+                    onClick={handleSaveVoice}
+                    disabled={savingVoice}
+                    className="flex items-center gap-2 px-6 py-2.5 bg-[#818CF8] text-white font-bold text-sm rounded-xl hover:bg-[#818CF8]/90 transition-colors disabled:opacity-50 shadow-lg shadow-[#818CF8]/20"
+                  >
+                    {savingVoice
+                      ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Saving…</>
+                      : <><span className="material-symbols-outlined text-[18px]">save</span>Save Voice</>
+                    }
+                  </button>
+                  {voiceSaved && (
+                    <div className="flex items-center gap-1.5 text-emerald-400 text-sm font-semibold animate-in fade-in duration-200">
+                      <span className="material-symbols-outlined text-[18px]">check_circle</span>
+                      Voice preference saved!
+                    </div>
+                  )}
+                </div>
+
+                <p className="mt-4 text-xs text-slate-600 leading-relaxed">
+                  Voice selection applies to your next session. The backend uses your preference when connecting to Gemini Live.
+                </p>
+              </div>
+
               {/* Danger Zone */}
               <div className="pt-8 border-t border-white/5">
                 <div className="flex items-center gap-2 mb-5 text-red-400">
@@ -160,7 +250,7 @@ function SettingsInner() {
                 {!deleteConfirm ? (
                   <div className="p-6 border border-red-400/20 rounded-xl bg-red-400/[0.04] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
                     <div>
-                      <p className="text-slate-100 font-semibold text-sm">Delete Account & All Data</p>
+                      <p className="text-slate-100 font-semibold text-sm">Delete Account &amp; All Data</p>
                       <p className="text-slate-500 text-sm mt-1 leading-relaxed">
                         Permanently removes all sessions, beliefs, and audio. This cannot be undone.
                       </p>
@@ -187,20 +277,16 @@ function SettingsInner() {
                       <button
                         onClick={() => setDeleteConfirm(false)}
                         className="flex-1 px-5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm font-bold text-slate-300 hover:text-white transition-colors"
-                      >
-                        Cancel
-                      </button>
+                      >Cancel</button>
                       <button
                         onClick={handleDeleteAll}
                         disabled={deleting}
                         className="flex-1 px-5 py-2.5 rounded-xl bg-red-500 text-white text-sm font-bold hover:bg-red-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-red-500/20"
                       >
-                        {deleting ? (
-                          <>
-                            <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                            Deleting…
-                          </>
-                        ) : 'Yes, delete everything'}
+                        {deleting
+                          ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Deleting…</>
+                          : 'Yes, delete everything'
+                        }
                       </button>
                     </div>
                   </div>
@@ -213,12 +299,11 @@ function SettingsInner() {
           {activeTab === 'privacy' && (
             <div className="space-y-10 animate-in fade-in slide-in-from-bottom-3 duration-300">
               <div className="border-b border-white/5 pb-6">
-                <h1 className="font-display text-3xl font-bold text-white tracking-tight">Privacy & Security</h1>
+                <h1 className="font-display text-3xl font-bold text-white tracking-tight">Privacy &amp; Security</h1>
                 <p className="text-slate-500 mt-2">Manage your data, anonymity, and security preferences.</p>
               </div>
 
               <div className="space-y-4">
-                {/* Data Export */}
                 <div className="p-6 border border-white/10 rounded-xl bg-white/[0.02] hover:bg-white/[0.04] transition-colors">
                   <div className="flex items-start justify-between gap-4">
                     <div>
@@ -231,7 +316,6 @@ function SettingsInner() {
                   </div>
                 </div>
 
-                {/* Session Anonymity */}
                 <div className="p-6 border border-white/10 rounded-xl bg-white/[0.02] hover:bg-white/[0.04] transition-colors">
                   <div className="flex items-start justify-between gap-4">
                     <div>
@@ -244,7 +328,6 @@ function SettingsInner() {
                   </div>
                 </div>
 
-                {/* Zero-knowledge */}
                 <div className="p-6 border border-white/10 rounded-xl bg-white/[0.02]">
                   <div className="flex items-center gap-3 mb-2">
                     <span className="material-symbols-outlined text-[#818CF8] text-[20px]">lock</span>

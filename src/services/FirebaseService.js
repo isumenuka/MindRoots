@@ -171,13 +171,18 @@ async function getUserDoc(uid) {
   return snap.exists() ? snap.data() : null
 }
 
+async function updateUserVoice(uid, voice) {
+  const userRef = doc(db, 'users', uid)
+  await updateDoc(userRef, { preferred_voice: voice })
+}
+
 export {
   auth, db, app,
   signInWithGoogle, signOut,
   createSession, updateSessionStatus, saveBelief, updateBelief,
   saveBeliefTree, getBeliefTree, getBeliefs, getSessions, getSession,
   generateShareToken, getShareData, deleteAllUserData, deleteSession,
-  markOnboardingComplete, getUserDoc,
+  markOnboardingComplete, getUserDoc, updateUserVoice,
   onAuthStateChanged,
   onSnapshot, doc, collection,
 }
