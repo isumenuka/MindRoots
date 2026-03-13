@@ -63,7 +63,7 @@ export default function HistoryPage() {
 
       {/* Main content */}
       <main className="flex-1 overflow-y-auto relative z-10 pt-14 md:pt-0">
-        <div className="max-w-5xl mx-auto px-6 lg:px-10 py-8 md:py-10">
+        <div className="max-w-[1400px] mx-auto px-4 lg:px-8 py-8 md:py-10">
           {/* Header */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-10">
             <div>

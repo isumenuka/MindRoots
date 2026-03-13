@@ -19,7 +19,7 @@ export default function BeliefTreeMap({ beliefs = [], session = {} }) {
   const [hoveredNode, setHoveredNode] = useState(null)
 
   // ── Hierarchical Layout Algorithm ──────────────────────────────────────────
-  // Calculate positions based on depth and sibling index
+  // Two-pass: first record (level, orderAtLevel), then center using final counts
   const getLayout = useCallback(() => {
     const nodeMap = {}
     beliefs.forEach(b => nodeMap[b.id] = { ...b, children: [] })
@@ -33,34 +33,32 @@ export default function BeliefTreeMap({ beliefs = [], session = {} }) {
       }
     })
 
-    const positions = {}
-    const levelCounts = {}
+    // Pass 1: assign level + order index per level
+    const levelOrders = {}   // nodeId -> { level, order }
+    const levelCounts = {}   // level  -> total node count
 
     const walk = (nodeId, level = 0) => {
       if (levelCounts[level] === undefined) levelCounts[level] = 0
-      const orderAtLevel = levelCounts[level]
+      levelOrders[nodeId] = { level, order: levelCounts[level] }
       levelCounts[level]++
-
-      positions[nodeId] = {
-        x: orderAtLevel * (NODE_W + 60) - (levelCounts[level] * (NODE_W + 60)) / 2, // simple centered-ish
-        y: level * LEVEL_H
-      }
 
       const node = nodeMap[nodeId]
       if (node && node.children) {
         node.children.forEach(childId => walk(childId, level + 1))
       }
     }
-
     roots.forEach(rootId => walk(rootId, 1))
-    
-    // Adjust centering: if levelCounts[level] is large, shift the whole level
-    // This is a simple layout, good enough for 5-10 nodes
-    Object.keys(positions).forEach(id => {
-      const level = Math.floor(positions[id].y / LEVEL_H)
-      const count = levelCounts[level] || 1
-      const offset = (count - 1) * (NODE_W + 60) / 2
-      positions[id].x -= offset
+
+    // Pass 2: compute centered x positions using final counts
+    const positions = {}
+    Object.keys(levelOrders).forEach(id => {
+      const { level, order } = levelOrders[id]
+      const count = levelCounts[level]
+      const totalWidth = count * (NODE_W + 60) - 60
+      positions[id] = {
+        x: order * (NODE_W + 60) - totalWidth / 2 + NODE_W / 2,
+        y: level * LEVEL_H,
+      }
     })
 
     return positions

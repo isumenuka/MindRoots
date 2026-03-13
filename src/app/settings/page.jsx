@@ -79,7 +79,7 @@ function SettingsInner() {
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto relative z-10">
         {/* Top bar */}
-        <header className="h-14 flex items-center justify-between px-6 lg:px-10 border-b border-white/5 sticky top-0 bg-[#0A0A0A]/80 backdrop-blur-xl z-20">
+        <header className="h-14 flex items-center justify-between px-4 lg:px-8 border-b border-white/5 sticky top-0 bg-[#0A0A0A]/80 backdrop-blur-xl z-20">
           <div className="flex items-center gap-2 text-xs uppercase tracking-widest font-semibold text-slate-500">
             <span>Account</span>
             <span className="material-symbols-outlined text-[14px]">chevron_right</span>
@@ -102,7 +102,7 @@ function SettingsInner() {
           </div>
         </header>
 
-        <div className="max-w-2xl mx-auto py-10 px-6 lg:px-8">
+        <div className="max-w-4xl mx-auto py-10 px-4 lg:px-8">
 
           {/* ── PROFILE TAB ── */}
           {activeTab === 'profile' && (

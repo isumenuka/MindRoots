@@ -43,40 +43,40 @@ export default function BeliefCard({ node, index }) {
               className="size-2 rounded-full shadow-[0_0_8px_rgba(129,140,248,0.8)]"
               style={{ backgroundColor: weightColor }}
             />
-            <span className="text-xs font-bold text-accent uppercase tracking-widest">
+            <span className="text-sm font-bold text-accent uppercase tracking-widest">
               Origin: {node.origin_year} {node.age_at_origin ? `(Age ${node.age_at_origin})` : ''} · {node.origin_person}
             </span>
           </div>
         </div>
 
         {/* Belief statement */}
-        <h3 className="text-2xl font-display font-semibold text-slate-100 mb-4 leading-tight relative z-10">
+        <h3 className="text-3xl font-display font-semibold text-slate-100 mb-4 leading-tight relative z-10">
           "{node.belief}"
         </h3>
 
         {/* Written analysis */}
         {node.written_analysis && (
-          <p className="text-slate-400 font-body leading-relaxed mb-6 text-sm lg:text-base relative z-10 group-hover:text-slate-300 transition-colors duration-300">
+          <p className="text-slate-400 font-body leading-relaxed mb-6 text-base lg:text-lg relative z-10 group-hover:text-slate-300 transition-colors duration-300">
             {node.written_analysis}
           </p>
         )}
 
         {/* Cost Today */}
         <div className="bg-surface rounded-lg p-4 border-l-2 border-accent/50 relative z-10 group-hover:border-accent transition-colors duration-300">
-          <p className="text-xs font-bold text-accent uppercase tracking-widest mb-1">Cost Today</p>
-          <p className="text-slate-300 text-sm italic">{node.cost_today}</p>
+          <p className="text-sm font-bold text-accent uppercase tracking-widest mb-1">Cost Today</p>
+          <p className="text-slate-300 text-base italic">{node.cost_today}</p>
         </div>
 
         {/* Emotional weight badge */}
         <div className="mt-4 flex items-center gap-2">
           <span
-            className="inline-flex items-center px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest"
+            className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest"
             style={{ backgroundColor: `${weightColor}22`, color: weightColor, border: `1px solid ${weightColor}44` }}
           >
             {node.emotional_weight} weight
           </span>
           {node.still_serving === false && (
-            <span className="inline-flex items-center px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest bg-red-500/10 text-red-400 border border-red-500/20">
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest bg-red-500/10 text-red-400 border border-red-500/20">
               No longer serving you
             </span>
           )}

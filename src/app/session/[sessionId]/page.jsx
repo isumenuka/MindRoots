@@ -110,7 +110,7 @@ export default function SessionPage({ params }) {
       <div className="fixed bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-accent/5 blur-[120px] rounded-full" />
 
       {/* ── Header ───────────────────────────────────────────────────── */}
-      <header className="relative z-10 flex items-center justify-between border-b border-white/5 px-6 py-4 lg:px-40">
+      <header className="relative z-10 flex items-center justify-between border-b border-white/5 px-6 py-4 lg:px-8">
         <AppLogo />
         <div className="flex gap-2 sm:gap-3">
           <button onClick={() => router.push('/history')}
@@ -125,7 +125,7 @@ export default function SessionPage({ params }) {
       </header>
 
       <main className="relative z-10 flex flex-1 flex-col items-center">
-        <div className="w-full max-w-[960px] px-6 lg:px-10 py-8">
+        <div className="w-full max-w-[1400px] px-4 lg:px-8 py-8">
 
           {/* ── Hero ─────────────────────────────────────────────────── */}
           <div className="mb-10 text-center lg:text-left">

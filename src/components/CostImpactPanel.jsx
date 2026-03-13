@@ -17,7 +17,7 @@ export default function CostImpactPanel({ beliefs = [], session = {} }) {
         <div className="h-px flex-1 bg-gradient-to-r from-transparent via-red-500/30 to-transparent" />
         <div className="flex items-center gap-2.5 px-4 py-1.5 rounded-full border border-red-500/20 bg-red-500/5">
           <div className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
-          <span className="text-[10px] font-black text-red-400 uppercase tracking-[0.2em]">
+          <span className="text-xs font-black text-red-400 uppercase tracking-[0.2em]">
             The Cost of These Beliefs
           </span>
         </div>
@@ -41,28 +41,28 @@ export default function CostImpactPanel({ beliefs = [], session = {} }) {
               {/* Index */}
               <div className="relative flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center"
                 style={{ background: cfg.bg, border: `1px solid ${cfg.border}` }}>
-                <span className="text-xs font-black font-mono" style={{ color: cfg.color }}>
+                <span className="text-sm font-black font-mono" style={{ color: cfg.color }}>
                   {String(i + 1).padStart(2, '0')}
                 </span>
               </div>
 
               {/* Belief → cost */}
               <div className="relative flex-1 min-w-0">
-                <p className="text-slate-300 text-sm font-semibold mb-1 leading-snug">
+                <p className="text-slate-300 text-base font-semibold mb-1 leading-snug">
                   "{belief.belief}"
                 </p>
                 <div className="flex items-start gap-2 mt-2">
-                  <span className="text-[9px] font-black uppercase tracking-widest mt-0.5"
+                  <span className="text-xs font-black uppercase tracking-widest mt-0.5"
                     style={{ color: cfg.color }}>{cfg.label}</span>
-                  <span className="text-slate-600 text-[10px] mt-0.5">→</span>
-                  <span className="text-slate-400 text-xs italic leading-snug">{belief.cost_today}</span>
+                  <span className="text-slate-600 text-xs mt-0.5">→</span>
+                  <span className="text-slate-400 text-sm italic leading-snug">{belief.cost_today}</span>
                 </div>
               </div>
 
               {/* Origin tag */}
               <div className="relative flex-shrink-0 text-right">
-                <p className="text-[9px] text-slate-600 uppercase tracking-wider">{belief.origin_year || ''}</p>
-                <p className="text-[10px] font-bold mt-0.5" style={{ color: cfg.color }}>
+                <p className="text-xs text-slate-500 uppercase tracking-wider">{belief.origin_year || ''}</p>
+                <p className="text-sm font-bold mt-0.5" style={{ color: cfg.color }}>
                   {belief.origin_person || ''}
                 </p>
               </div>
@@ -80,15 +80,15 @@ export default function CostImpactPanel({ beliefs = [], session = {} }) {
             style={{ background: 'rgba(239,68,68,0.08)' }} />
 
           <div className="relative">
-            <p className="text-[9px] font-black text-red-400 uppercase tracking-[0.2em] mb-3">
+            <p className="text-xs font-black text-red-400 uppercase tracking-[0.2em] mb-3">
               Total Life Impact
             </p>
-            <p className="text-xl lg:text-2xl font-display font-bold text-slate-100 leading-snug mb-4">
+            <p className="text-2xl lg:text-3xl font-display font-bold text-slate-100 leading-snug mb-4">
               {session?.estimated_total_cost ||
                 `${profoundBeliefs.length} high-weight belief${profoundBeliefs.length !== 1 ? 's' : ''} actively limiting your potential`
               }
             </p>
-            <p className="text-sm text-slate-500 italic font-body">
+            <p className="text-base text-slate-400 italic font-body">
               These beliefs were installed before you had the wisdom to question them. Now you have the map — the next step is yours.
             </p>
           </div>
@@ -101,8 +101,8 @@ export default function CostImpactPanel({ beliefs = [], session = {} }) {
               { label: 'Not Serving', val: beliefs.filter(b => b.still_serving === false).length, color: '#818CF8' },
             ].map(({ label, val, color }) => (
               <div key={label}>
-                <p className="text-2xl font-display font-black" style={{ color }}>{val}</p>
-                <p className="text-[9px] uppercase tracking-widest text-slate-600 mt-0.5">{label}</p>
+                <p className="text-3xl font-display font-black" style={{ color }}>{val}</p>
+                <p className="text-xs uppercase tracking-widest text-slate-500 mt-0.5">{label}</p>
               </div>
             ))}
           </div>
