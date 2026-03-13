@@ -136,7 +136,7 @@ export default function LandingPage() {
             <button
               onClick={() => {
                 if (user) {
-                  handleSignIn()
+                  router.push('/history')
                 } else {
                   document.getElementById('signup-cta')?.scrollIntoView({ behavior: 'smooth' })
                 }
