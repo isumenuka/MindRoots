@@ -93,3 +93,13 @@ This repository includes Infrastructure-as-Code configurations to automate cloud
 1.  **Root `Dockerfile`:** A multi-stage Docker build process optimized to compile and serve the standalone Next.js frontend.
 2.  **Backend `backend/Dockerfile`:** Automates the Python environment setup and uvicorn server execution for the FastAPI service.
 3.  **Firebase Configs:** `firebase.json` and `firestore.rules` define deployed cloud database structures and security rules.
+
+## 🧪 Reproducible Testing
+
+Judges and reviewers can reproduce the main testing flow of MindRoots without going through the authentication onboarding loop:
+
+1. **Start the Application:** Run `.\start.ps1` as described above to ensure both servers are active.
+2. **Access the Testing Route:** Navigate directly to `http://localhost:3000/demo`.
+3. **Bypass Auth:** This dedicated route bypasses Firebase Authentication constraints for quick evaluation.
+4. **Test Real-Time Audio:** Allow microphone permissions when prompted. The connection to the backend and the Gemini Live API will establish automatically.
+5. **Verify AI Agent:** Speak into the microphone. You should hear the Gemini model (using the 'Puck' voice) respond to you in real-time, validating the core WebSockets and AudioWorklet pipelines.
