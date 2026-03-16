@@ -263,11 +263,14 @@ class GeminiLiveService {
     this._send({ realtimeInput: { audioStreamEnd: true } })
   }
 
-  // Send text message — use sendRealtimeInput for ALL real-time input (not clientContent)
+  // Send text message using clientContent
   async sendText(text) {
     if (!this.isConnected) return
     this._send({
-      realtimeInput: { text }
+      clientContent: {
+        turns: [{ role: 'user', parts: [{ text }] }],
+        turnComplete: true
+      }
     })
     this.fullTranscript.push({ role: 'user', text })
     this.onTranscript?.({ role: 'user', text })

@@ -166,6 +166,7 @@ export default function InterviewPage() {
         console.error('[Interview] Failed to start:', err)
         setMicError(err.message)
         setAgentStatus('active') // Still show UI
+        setShowTextInput(true) // Auto-open the text input for the user to type
       }
     }
 
