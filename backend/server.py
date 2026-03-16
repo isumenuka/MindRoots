@@ -73,6 +73,8 @@ app.add_middleware(
         "http://localhost:3001",
         "http://localhost:3002",
         "http://127.0.0.1:3000",
+        "https://mindroots.web.app",
+        "https://mindroots.firebaseapp.com",
         os.environ.get("NEXT_PUBLIC_APP_URL", "http://localhost:3000"),
     ],
     allow_credentials=True,

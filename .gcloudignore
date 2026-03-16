@@ -1,0 +1,14 @@
+.git
+.gitignore
+node_modules/
+.next/
+dist/
+build/
+.cache/
+.DS_Store
+Thumbs.db
+__pycache__/
+*.pyc
+
+# Explicitly do NOT ignore .env.local because Cloud Build needs it for Next.js build
+!.env.local

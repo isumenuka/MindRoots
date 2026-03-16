@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: 'standalone',
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: 'storage.googleapis.com' },
@@ -9,7 +10,7 @@ const nextConfig = {
   serverExternalPackages: ['@react-pdf/renderer'],
   experimental: {
     serverActions: {
-      allowedOrigins: ['localhost:3000'],
+      allowedOrigins: ['localhost:3000', 'mindroots.web.app', 'mindroots.firebaseapp.com'],
     },
   },
   // Required for @react-pdf/renderer in Next.js
@@ -23,3 +24,4 @@ const nextConfig = {
 }
 
 module.exports = nextConfig
+

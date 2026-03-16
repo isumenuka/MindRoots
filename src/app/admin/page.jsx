@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { auth, onAuthStateChanged } from '@/services/FirebaseService'
 
-const BACKEND = 'http://localhost:8000'
+const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'
 const ADMIN_SECRET = process.env.NEXT_PUBLIC_ADMIN_SECRET || ''
 const ADMIN_UIDS = (process.env.NEXT_PUBLIC_ADMIN_UIDS || '').split(',').map(s => s.trim()).filter(Boolean)
 
