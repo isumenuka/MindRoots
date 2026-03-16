@@ -1,36 +1,149 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# MindRoots
 
-## Getting Started
+**MindRoots** is an interactive, voice-driven web application powered by **Google's Gemini 2.5 Flash Native Audio Preview** and the new Gemini Multimodal Live API. It leverages advanced conversational AI to act as a responsive, real-time agent that can see, hear, and speak with users, dynamically maintaining affective dialog and providing mental frameworks/belief trees.
 
-First, run the development server:
+## 🚀 Features & Functionality
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+*   **Real-time Multimodal Interaction:** Uses WebSockets to connect directly to the Gemini Live API, streaming audio from the user's microphone and playing back Gemini's spoken audio responses seamlessly.
+*   **Affective Dialog & Dynamic Configurations:** An Admin panel allows operators to dynamically update the agent's behavior, voice ("Puck", "Aoede", etc.), temperature, and System Instructions *while the app is running*.
+*   **Secure Ephemeral Tokens:** The Next.js frontend connects to a Python FastAPI backend to securely request short-lived ephemeral tokens via the `@google/genai` SDK, ensuring API keys are never exposed to the client browser.
+*   **User Authentication & Data Persistence:** Integrated with Firebase Authentication (Google Sign-in) and Cloud Firestore to track user state, generated "Belief Trees", and session data.
+*   **Nano Banana Integration:** Utilizes Gemini image generation models to dynamically create visual metaphors based on conversation context.
+
+## 🏗️ Architecture
+
+```mermaid
+graph TD
+    %% Define Styles
+    classDef frontend fill:#3b82f6,stroke:#1d4ed8,stroke-width:2px,color:#fff;
+    classDef backend fill:#10b981,stroke:#047857,stroke-width:2px,color:#fff;
+    classDef google fill:#ea4335,stroke:#b31412,stroke-width:2px,color:#fff;
+    classDef db fill:#f59e0b,stroke:#b45309,stroke-width:2px,color:#fff;
+    classDef user fill:#64748b,stroke:#334155,stroke-width:2px,color:#fff;
+
+    %% Nodes
+    User(("🧑 User\n(Browser/Mic)")):::user
+
+    subgraph "Frontend (Next.js & React)"
+        UI["UI Components\n(React)"]:::frontend
+        AudioContext["AudioContext / Worklets\n(Mic input & Speaker output)"]:::frontend
+        StateStore["App State\n(Zustand)"]:::frontend
+        LiveAPIClient["Gemini SDK Client\n(WebSockets)"]:::frontend
+    end
+
+    subgraph "Backend (Python FastAPI)"
+        APIServer["FastAPI Server"]:::backend
+        TokenManager["Token Manager\n(Ephemeral Tokens)"]:::backend
+        ConfigManager["Config / System Prompts"]:::backend
+    end
+
+    subgraph "Google Cloud & AI Services"
+        GeminiLive["Gemini 2.5 Flash\n(Native Audio / Multimodal Live API)"]:::google
+        FirebaseAuth["Firebase Auth"]:::db
+        Firestore["Firestore Database"]:::db
+    end
+
+    %% Flow/Connections
+    User <-->|Audio In/Out| AudioContext
+    User -->|Interactions| UI
+    
+    UI <--> StateStore
+    AudioContext <--> LiveAPIClient
+    StateStore <--> LiveAPIClient
+
+    %% Authentication & Config flow
+    UI -->|1. Request Token| APIServer
+    APIServer -->|2. Generate Ephemeral Token| TokenManager
+    TokenManager -->|3. Call google-genai SDK| GeminiLive
+    TokenManager -->|4. Return Secure Token| UI
+
+    %% Realtime Connection
+    LiveAPIClient <==>|5. Bi-directional WebSocket\n(Realtime Audio/Video/Text)| GeminiLive
+    
+    %% Firebase Integration
+    UI -->|Authenticate| FirebaseAuth
+    UI <-->|Store/Retrieve User Data (Beliefs)| Firestore
+    
+    %% Admin features
+    APIServer <-->|Admin Updates| ConfigManager
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🛠️ Technologies Used
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+*   **Frontend:** Next.js (App Router), React 18, Tailwind CSS, Zustand (State Management), Framer Motion (Animations).
+*   **Audio Processing:** Web Audio API, Custom `AudioWorkletProcessor` (PCM 16-bit 16kHz audio formatting required by Gemini), and `AudioContext` scheduling for low-latency playback.
+*   **Backend:** Python 3, FastAPI, Uvicorn.
+*   **Google AI:** Google GenAI SDK (`@google/genai` / `google-genai`), `gemini-2.5-flash-native-audio-preview-12-2025` model.
+*   **Google Cloud:** Firebase Authentication, Cloud Firestore.
+*   **Infrastructure / Deployment:** Automated via multi-stage Dockerfiles (`Dockerfile` and `backend/Dockerfile`).
 
-This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
+## 🧠 Findings and Learnings
 
-## Learn More
+During the development of MindRoots, several key learnings emerged:
+1.  **Audio Formatting is Critical:** The Gemini Multimodal Live API strictly expects 16-bit PCM audio at 16kHz. Implementing an `AudioWorkletProcessor` on the frontend was crucial to downsample and convert the raw microphone input efficiently without blocking the main thread.
+2.  **Ephemeral Tokens Enhance Security:** Transitioning from long-lived API keys on the client to requesting 30-minute ephemeral tokens from the Python backend significantly improved the security posture without sacrificing the low latency of the direct WebSocket connection to Google's edges.
+3.  **State Management in Streaming Environments:** Handling real-time interruptions, dynamic Voice Activity Detection (VAD) configurations, and synchronized UI state (like audio visualizers) concurrently required robust state management techniques using Zustand to prevent race conditions.
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 💻 Spin-up Instructions (How to run locally)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
+MindRoots is designed to be fully reproducible with a single script that cleanly starts both the Python backend and the Next.js frontend.
 
-## Deploy on Vercel
+### Prerequisites
+*   [Node.js](https://nodejs.org/) (v20+ recommended)
+*   [Python](https://www.python.org/) (3.10+ recommended)
+*   A `GEMINI_API_KEY` (Get one from [Google AI Studio](https://aistudio.google.com/))
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### 1. Environment Setup
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+**Backend (.env):**
+Create a `.env` file inside the `backend/` directory:
+```env
+GEMINI_API_KEY=your_gemini_api_key_here
+ADMIN_SECRET=mindroots-admin-2025
+```
+
+**Frontend (.env.local):**
+Depending on your Firebase setup, create a `.env.local` in the root directory with your Firebase configuration variables.
+
+### 2. Install Dependencies
+
+**Frontend:**
+```bash
+npm install
+```
+
+**Backend:**
+```bash
+cd backend
+python -m venv .venv
+
+# On Windows:
+.\.venv\Scripts\Activate.ps1
+# On Mac/Linux:
+# source .venv/bin/activate
+
+pip install -r requirements.txt
+cd ..
+```
+
+### 3. Run the Application
+
+For a clean, single-command startup (Windows PowerShell):
+```powershell
+.\start.ps1
+```
+*(This script will kill old orphan ports, clear Next.js/Python caches, and boot both the FastAPI server on port 8000 and the Next.js frontend on port 3000.)*
+
+### 4. Access the App
+*   **Main Application:** `http://localhost:3000`
+*   **Admin Dashboard:** `http://localhost:3000/admin`
+*   **Backend API Docs:** `http://localhost:8000/docs`
+
+## ☁️ Cloud Deployment Automation (IaC)
+
+This repository includes Infrastructure-as-Code configurations to automate cloud deployment:
+1.  **Root `Dockerfile`:** A multi-stage Docker build process optimized to compile and serve the standalone Next.js frontend.
+2.  **Backend `backend/Dockerfile`:** Automates the Python environment setup and uvicorn server execution for the FastAPI service.
+3.  **Firebase Configs:** `firebase.json` and `firestore.rules` define deployed cloud database structures and security rules.
