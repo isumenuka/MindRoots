@@ -4,7 +4,7 @@
  * Relies on the MindRoots Python backend ONLY to securely fetch an Ephemeral Token.
  */
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'
 
 class GeminiLiveService {
   constructor() {
