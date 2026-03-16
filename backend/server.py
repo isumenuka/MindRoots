@@ -41,6 +41,7 @@ live_config: dict = {
     "vad_silence_duration_ms": 500,
     "vad_prefix_padding_ms": 500,
     "system_prompt": None,  # None = use instructions.md dynamically
+    "youtube_video_url": "https://www.youtube.com/embed/jNQXAC9IVRw?rel=0",
 }
 
 def get_system_prompt() -> str:
@@ -98,6 +99,7 @@ class ConfigUpdate(BaseModel):
     vad_end_sensitivity: Optional[str] = None
     vad_silence_duration_ms: Optional[int] = None
     vad_prefix_padding_ms: Optional[int] = None
+    youtube_video_url: Optional[str] = None
     system_prompt: Optional[str] = None
 
 

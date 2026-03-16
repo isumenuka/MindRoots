@@ -6,18 +6,59 @@ import { auth, signInWithGoogle, onAuthStateChanged, getUserDoc } from '@/servic
 import useAppStore from '@/store/useAppStore'
 import AppLogo from '@/components/AppLogo'
 
+function getEmbedUrl(url) {
+  if (!url) return 'https://www.youtube.com/embed/jNQXAC9IVRw?rel=0';
+  try {
+    let videoId = '';
+    if (url.includes('youtu.be/')) {
+      videoId = url.split('youtu.be/')[1].split(/[?#]/)[0];
+    } else if (url.includes('youtube.com/watch')) {
+      const urlObj = new URL(url);
+      videoId = urlObj.searchParams.get('v');
+    } else if (url.includes('youtube.com/embed/')) {
+      return url;
+    }
+    
+    if (videoId) {
+      return `https://www.youtube.com/embed/${videoId}?rel=0`;
+    }
+  } catch (err) {
+    console.error('Error parsing YouTube URL:', err);
+  }
+  return url;
+}
+
 export default function LandingPage() {
   const router = useRouter()
   const setUser = useAppStore(s => s.setUser)
   const user = useAppStore(s => s.user)
   const [signingIn, setSigningIn] = useState(false)
   const [error, setError] = useState(null)
+  const [youtubeVideoUrl, setYoutubeVideoUrl] = useState('https://www.youtube.com/embed/jNQXAC9IVRw?rel=0')
 
   useEffect(() => {
     // Just sync auth state, no forced redirects
     const unsub = onAuthStateChanged(auth, async (user) => {
       setUser(user)
     })
+
+    // Fetch dynamic config for YouTube video
+    const fetchConfig = async () => {
+      try {
+        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'
+        const res = await fetch(`${backendUrl}/api/config`)
+        if (res.ok) {
+          const data = await res.json()
+          if (data.youtube_video_url) {
+            setYoutubeVideoUrl(getEmbedUrl(data.youtube_video_url))
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch config for YouTube video URL', err)
+      }
+    }
+    fetchConfig()
+
     return () => unsub()
   }, [setUser])
 
@@ -171,7 +212,7 @@ export default function LandingPage() {
             <iframe 
               width="100%" 
               height="100%" 
-              src="https://www.youtube.com/embed/jNQXAC9IVRw?rel=0" 
+              src={youtubeVideoUrl} 
               title="MindRoots Demo" 
               frameBorder="0" 
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 

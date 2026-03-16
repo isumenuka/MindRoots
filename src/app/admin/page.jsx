@@ -82,6 +82,7 @@ export default function AdminPage() {
     vad_silence_duration_ms: 500,
     vad_prefix_padding_ms: 500,
     system_prompt: 'You are a helpful assistant. Be concise and friendly.',
+    youtube_video_url: 'https://www.youtube.com/embed/jNQXAC9IVRw?rel=0',
   })
 
   const set = (key, val) => setCfg(c => ({ ...c, [key]: val }))
@@ -228,6 +229,19 @@ export default function AdminPage() {
               >
                 {MODELS.map(m => <option key={m} value={m} className="bg-[#1a1a2e]">{m}</option>)}
               </select>
+            </div>
+          </Section>
+
+          {/* Appearance */}
+          <Section title="Appearance" icon="palette">
+            <div>
+              <Label hint="The primary YouTube video embed URL shown on the home page.">YouTube Video URL</Label>
+              <input
+                type="text"
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-slate-200 text-sm focus:outline-none focus:border-[#818CF8]/50 transition-colors"
+                value={cfg.youtube_video_url || ''}
+                onChange={e => set('youtube_video_url', e.target.value)}
+              />
             </div>
           </Section>
 
