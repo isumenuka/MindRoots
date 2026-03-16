@@ -12,61 +12,7 @@
 
 ## 🏗️ Architecture
 
-```mermaid
-graph TD
-    %% Define Styles
-    classDef frontend fill:#3b82f6,stroke:#1d4ed8,stroke-width:2px,color:#fff;
-    classDef backend fill:#10b981,stroke:#047857,stroke-width:2px,color:#fff;
-    classDef google fill:#ea4335,stroke:#b31412,stroke-width:2px,color:#fff;
-    classDef db fill:#f59e0b,stroke:#b45309,stroke-width:2px,color:#fff;
-    classDef user fill:#64748b,stroke:#334155,stroke-width:2px,color:#fff;
-
-    %% Nodes
-    User(("🧑 User\n(Browser/Mic)")):::user
-
-    subgraph "Frontend (Next.js & React)"
-        UI["UI Components\n(React)"]:::frontend
-        AudioContext["AudioContext / Worklets\n(Mic input & Speaker output)"]:::frontend
-        StateStore["App State\n(Zustand)"]:::frontend
-        LiveAPIClient["Gemini SDK Client\n(WebSockets)"]:::frontend
-    end
-
-    subgraph "Backend (Python FastAPI)"
-        APIServer["FastAPI Server"]:::backend
-        TokenManager["Token Manager\n(Ephemeral Tokens)"]:::backend
-        ConfigManager["Config / System Prompts"]:::backend
-    end
-
-    subgraph "Google Cloud & AI Services"
-        GeminiLive["Gemini 2.5 Flash\n(Native Audio / Multimodal Live API)"]:::google
-        FirebaseAuth["Firebase Auth"]:::db
-        Firestore["Firestore Database"]:::db
-    end
-
-    %% Flow/Connections
-    User <-->|Audio In/Out| AudioContext
-    User -->|Interactions| UI
-    
-    UI <--> StateStore
-    AudioContext <--> LiveAPIClient
-    StateStore <--> LiveAPIClient
-
-    %% Authentication & Config flow
-    UI -->|1. Request Token| APIServer
-    APIServer -->|2. Generate Ephemeral Token| TokenManager
-    TokenManager -->|3. Call google-genai SDK| GeminiLive
-    TokenManager -->|4. Return Secure Token| UI
-
-    %% Realtime Connection
-    LiveAPIClient <==>|5. Bi-directional WebSocket\n(Realtime Audio/Video/Text)| GeminiLive
-    
-    %% Firebase Integration
-    UI -->|Authenticate| FirebaseAuth
-    UI <-->|Store/Retrieve User Data (Beliefs)| Firestore
-    
-    %% Admin features
-    APIServer <-->|Admin Updates| ConfigManager
-```
+![MindRoots Architecture Diagram](public/architecture.png)
 
 ## 🛠️ Technologies Used
 
