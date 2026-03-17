@@ -185,6 +185,20 @@ async def health():
     return {"status": "ok"}
 
 
+@app.get("/")
+async def root():
+    return {
+        "service": "MindRoots Backend API",
+        "status": "online",
+        "endpoints": {
+            "health": "/health",
+            "config_get": "GET /api/config",
+            "config_post": "POST /api/config",
+            "token": "POST /api/token"
+        }
+    }
+
+
 if __name__ == "__main__":
     import uvicorn  # type: ignore
     print("""
