@@ -7,7 +7,7 @@ import useAppStore from '@/store/useAppStore'
 import AppLogo from '@/components/AppLogo'
 
 function getEmbedUrl(url) {
-  if (!url) return 'https://www.youtube.com/embed/jNQXAC9IVRw?rel=0';
+  if (!url) return 'https://www.youtube.com/embed/ZvtMh5gN3YI?rel=0';
   try {
     let videoId = '';
     if (url.includes('youtu.be/')) {
@@ -34,7 +34,7 @@ export default function LandingPage() {
   const user = useAppStore(s => s.user)
   const [signingIn, setSigningIn] = useState(false)
   const [error, setError] = useState(null)
-  const [youtubeVideoUrl, setYoutubeVideoUrl] = useState('https://www.youtube.com/embed/jNQXAC9IVRw?rel=0')
+  const [youtubeVideoUrl, setYoutubeVideoUrl] = useState('https://www.youtube.com/embed/ZvtMh5gN3YI?rel=0')
 
   useEffect(() => {
     // Just sync auth state, no forced redirects

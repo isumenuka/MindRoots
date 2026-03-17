@@ -82,7 +82,7 @@ export default function AdminPage() {
     vad_silence_duration_ms: 500,
     vad_prefix_padding_ms: 500,
     system_prompt: 'You are a helpful assistant. Be concise and friendly.',
-    youtube_video_url: 'https://www.youtube.com/embed/jNQXAC9IVRw?rel=0',
+    youtube_video_url: 'https://www.youtube.com/embed/ZvtMh5gN3YI?rel=0',
   })
 
   const set = (key, val) => setCfg(c => ({ ...c, [key]: val }))
