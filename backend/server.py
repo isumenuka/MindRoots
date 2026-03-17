@@ -44,6 +44,21 @@ live_config: dict = {
     "youtube_video_url": "https://www.youtube.com/embed/jNQXAC9IVRw?rel=0",
 }
 
+CONFIG_FILE = os.path.join(os.path.dirname(__file__), "config.json")
+
+def load_live_config():
+    if os.path.exists(CONFIG_FILE):
+        try:
+            with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+                saved_config = json.load(f)
+                live_config.update(saved_config)
+                print(f"Loaded config from {CONFIG_FILE}")
+        except Exception as e:
+            print(f"Error loading config file: {e}")
+
+load_live_config()
+
+
 def get_system_prompt() -> str:
     """Reads instructions from instructions.md or returns a default fallback."""
     instructions_path = os.path.join(os.path.dirname(__file__), "instructions.md")
@@ -129,6 +144,12 @@ async def update_config(
     for field, value in update.model_dump(exclude_none=True).items():
         live_config[field] = value
         updated[field] = value
+
+    try:
+        with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+            json.dump(live_config, f, indent=4)
+    except Exception as e:
+        print(f"Error saving config file: {e}")
 
     print(f"[Admin] Config updated: {list(updated.keys())}")
     return {"ok": True, "updated": updated, "config": live_config}

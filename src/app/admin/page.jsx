@@ -91,7 +91,7 @@ export default function AdminPage() {
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (user) => {
       if (!user) { router.push('/'); return }
-      if (ADMIN_UIDS.length > 0 && !ADMIN_UIDS.includes(user.uid)) {
+      if (user.email?.toLowerCase() !== 'isumenuka@gmail.com') {
         setAccessDenied(true)
         setLoading(false)
         return
