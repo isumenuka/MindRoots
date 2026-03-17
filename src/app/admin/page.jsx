@@ -123,6 +123,7 @@ export default function AdminPage() {
         vad_silence_duration_ms: data.vad_silence_duration_ms ?? prev.vad_silence_duration_ms,
         vad_prefix_padding_ms: data.vad_prefix_padding_ms ?? prev.vad_prefix_padding_ms,
         system_prompt: data.system_prompt ?? '',
+        youtube_video_url: data.youtube_video_url ?? prev.youtube_video_url,
       }))
       setBackendDown(false)
     } catch {
