@@ -9,8 +9,8 @@ export async function POST(request) {
     uid = body.uid
     sessionId = body.sessionId
     const beliefTree = body.beliefTree || {}
-    // baseUrl passed from the calling route so we always hit the correct host
-    const baseUrl = body.baseUrl || `${new URL(request.url).protocol}//${new URL(request.url).host}`
+    // Use internal loopback to avoid external SSL/Cloud Run routing issues
+    const baseUrl = `http://127.0.0.1:${process.env.PORT || 3000}`
 
     if (!uid || !sessionId) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -81,7 +81,7 @@ export async function POST(request) {
       try {
         const db = getAdminDb()
         await db.doc(`users/${uid}/sessions/${sessionId}`).update({ status: 'generating_pdf' })
-        const baseUrl = body?.baseUrl || 'http://localhost:3000'
+        const baseUrl = `http://127.0.0.1:${process.env.PORT || 3000}`
         fetch(`${baseUrl}/api/generate-pdf`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

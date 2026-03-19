@@ -4,9 +4,8 @@ import { getAdminDb } from '@/services/FirebaseAdminService'
 
 // ── POST handler ───────────────────────────────────────────────────────────────
 export async function POST(request) {
-  // Derive baseUrl from the incoming request so we work in ALL environments
-  const reqUrl = new URL(request.url)
-  const baseUrl = `${reqUrl.protocol}//${reqUrl.host}`
+  // Use internal loopback to avoid external SSL/Cloud Run routing issues
+  const baseUrl = `http://127.0.0.1:${process.env.PORT || 3000}`
 
   let uid, sessionId
   try {
