@@ -1,26 +1,5 @@
 import { NextResponse } from 'next/server'
-
-function firestoreBase() {
-  const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID
-  return `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents`
-}
-function firebaseKey() { return process.env.NEXT_PUBLIC_FIREBASE_API_KEY }
-
-async function setStatus(uid, sessionId, status) {
-  const key = firebaseKey()
-  const base = firestoreBase()
-  const res = await fetch(
-    `${base}/users/${uid}/sessions/${sessionId}?key=${key}&updateMask.fieldPaths=status`,
-    {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fields: { status: { stringValue: status } } }),
-    }
-  )
-  if (!res.ok) console.error('[generate-pdf] setStatus failed:', res.status, await res.text())
-  else console.log(`[generate-pdf] Status → ${status}`)
-  return res.ok
-}
+import { getAdminDb } from '@/services/FirebaseAdminService'
 
 export async function POST(request) {
   let uid, sessionId, beliefTree
@@ -34,6 +13,8 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
     }
 
+    const db = getAdminDb()
+
     // Generate PDF
     let pdfBytes = null
     try {
@@ -45,7 +26,8 @@ export async function POST(request) {
     }
 
     // Always mark complete regardless of PDF success
-    await setStatus(uid, sessionId, 'complete')
+    await db.doc(`users/${uid}/sessions/${sessionId}`).update({ status: 'complete' })
+    console.log('[generate-pdf] Status → complete')
 
     if (pdfBytes) {
       return new NextResponse(pdfBytes, {
@@ -61,7 +43,10 @@ export async function POST(request) {
   } catch (err) {
     console.error('[/api/generate-pdf] FATAL:', err)
     if (uid && sessionId) {
-      await setStatus(uid, sessionId, 'complete').catch(() => {})
+      try {
+        const db = getAdminDb()
+        await db.doc(`users/${uid}/sessions/${sessionId}`).update({ status: 'complete' })
+      } catch {}
     }
     return NextResponse.json({ error: err.message }, { status: 500 })
   }

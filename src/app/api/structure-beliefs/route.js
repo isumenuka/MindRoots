@@ -1,60 +1,13 @@
 import { NextResponse } from 'next/server'
 import { structureBeliefs } from '@/services/GeminiFlashService'
-
-// ── Shared Firestore REST helper ──────────────────────────────────────────────
-function firestoreBase() {
-  const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID
-  return `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents`
-}
-// Firebase Web API key — this is the correct key for Firestore REST API
-function firebaseKey() { return process.env.NEXT_PUBLIC_FIREBASE_API_KEY }
-
-async function patchDoc(path, fields, extraMasks = []) {
-  const base = firestoreBase()
-  const key = firebaseKey()
-  const masks = Object.keys(fields).concat(extraMasks)
-  const maskQuery = masks.map(f => `updateMask.fieldPaths=${encodeURIComponent(f)}`).join('&')
-
-  // Build typed field object
-  const typed = {}
-  for (const [k, v] of Object.entries(fields)) {
-    if (typeof v === 'string') typed[k] = { stringValue: v }
-    else if (typeof v === 'number') typed[k] = { integerValue: v }
-    else if (typeof v === 'boolean') typed[k] = { booleanValue: v }
-  }
-
-  const res = await fetch(`${base}/${path}?key=${key}&${maskQuery}`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ fields: typed }),
-  })
-  if (!res.ok) {
-    const txt = await res.text()
-    console.error(`[Firestore PATCH] ${path} →`, res.status, txt)
-  }
-  return res.ok
-}
-
-async function listDocs(path) {
-  const base = firestoreBase()
-  const key = firebaseKey()
-  const res = await fetch(`${base}/${path}?key=${key}`)
-  if (!res.ok) { console.error('[Firestore LIST]', res.status, await res.text()); return [] }
-  const data = await res.json()
-  return data.documents || []
-}
-
-function extractField(f) {
-  if (!f) return ''
-  return f.stringValue ?? f.integerValue ?? f.booleanValue ?? ''
-}
+import { getAdminDb } from '@/services/FirebaseAdminService'
 
 // ── POST handler ───────────────────────────────────────────────────────────────
 export async function POST(request) {
   // Derive baseUrl from the incoming request so we work in ALL environments
-  // (local dev, Cloud Run, etc.) without relying on NEXT_PUBLIC_APP_URL
   const reqUrl = new URL(request.url)
   const baseUrl = `${reqUrl.protocol}//${reqUrl.host}`
+
   let uid, sessionId
   try {
     const body = await request.json()
@@ -64,19 +17,21 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Missing uid or sessionId' }, { status: 400 })
     }
 
-    // ── 1. Read raw beliefs from Firestore ────────────────────────────────────
-    const beliefDocs = await listDocs(`users/${uid}/sessions/${sessionId}/beliefs`)
-    let rawBeliefs = beliefDocs.map(doc => {
-      const f = doc.fields || {}
+    const db = getAdminDb()
+
+    // ── 1. Read raw beliefs from Firestore (Admin SDK — bypasses rules) ──────
+    const beliefsSnap = await db.collection(`users/${uid}/sessions/${sessionId}/beliefs`).get()
+    let rawBeliefs = beliefsSnap.docs.map(doc => {
+      const f = doc.data()
       return {
-        belief: extractField(f.belief),
-        origin_person: extractField(f.origin_person),
-        origin_event: extractField(f.origin_event),
-        origin_year: parseInt(extractField(f.origin_year)) || 0,
-        age_at_origin: parseInt(extractField(f.age_at_origin)) || 0,
-        still_serving: f.still_serving?.booleanValue ?? true,
-        emotional_weight: extractField(f.emotional_weight) || 'medium',
-        cost_today: extractField(f.cost_today),
+        belief: f.belief || '',
+        origin_person: f.origin_person || '',
+        origin_event: f.origin_event || '',
+        origin_year: parseInt(f.origin_year) || 0,
+        age_at_origin: parseInt(f.age_at_origin) || 0,
+        still_serving: f.still_serving !== undefined ? f.still_serving : true,
+        emotional_weight: f.emotional_weight || 'medium',
+        cost_today: f.cost_today || '',
       }
     }).filter(b => b.belief)
 
@@ -121,30 +76,24 @@ export async function POST(request) {
 
     const summary = beliefTree.session_summary || {}
 
-    // ── 3. Save belief tree to Firestore ──────────────────────────────────────
-    await patchDoc(
-      `users/${uid}/sessions/${sessionId}/belief_tree/data`,
-      {
-        dominant_theme: summary.dominant_theme || '',
-        overall_emotional_tone: summary.overall_emotional_tone || '',
-        estimated_total_cost: summary.estimated_total_cost || '',
-        total_beliefs_found: summary.total_beliefs_found || rawBeliefs.length,
-        json_data: JSON.stringify(beliefTree),
-      }
-    )
+    // ── 3. Save belief tree to Firestore (Admin SDK) ──────────────────────────
+    await db.doc(`users/${uid}/sessions/${sessionId}/belief_tree/data`).set({
+      dominant_theme: summary.dominant_theme || '',
+      overall_emotional_tone: summary.overall_emotional_tone || '',
+      estimated_total_cost: summary.estimated_total_cost || '',
+      total_beliefs_found: summary.total_beliefs_found || rawBeliefs.length,
+      json_data: JSON.stringify(beliefTree),
+    })
 
     // ── 4. Advance session status → generating_images ─────────────────────────
-    const advanced = await patchDoc(
-      `users/${uid}/sessions/${sessionId}`,
-      {
-        status: 'generating_images',
-        dominant_theme: summary.dominant_theme || '',
-        total_beliefs: rawBeliefs.length,
-        overall_emotional_tone: summary.overall_emotional_tone || '',
-        estimated_total_cost: summary.estimated_total_cost || '',
-      }
-    )
-    console.log('[structure-beliefs] Status advanced to generating_images:', advanced)
+    await db.doc(`users/${uid}/sessions/${sessionId}`).update({
+      status: 'generating_images',
+      dominant_theme: summary.dominant_theme || '',
+      total_beliefs: rawBeliefs.length,
+      overall_emotional_tone: summary.overall_emotional_tone || '',
+      estimated_total_cost: summary.estimated_total_cost || '',
+    })
+    console.log('[structure-beliefs] Status → generating_images')
 
     // ── 5. Fire generate-images async ─────────────────────────────────────────
     fetch(`${baseUrl}/api/generate-images`, {
@@ -158,12 +107,15 @@ export async function POST(request) {
     console.error('[/api/structure-beliefs] FATAL:', err)
     // Emergency: still try to advance status so pipeline doesn't stay stuck
     if (uid && sessionId) {
-      await patchDoc(`users/${uid}/sessions/${sessionId}`, { status: 'generating_images' }).catch(() => {})
-      fetch(`${baseUrl}/api/generate-images`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ uid, sessionId, beliefTree: { belief_nodes: [], session_summary: {} }, baseUrl }),
-      }).catch(() => {})
+      try {
+        const db = getAdminDb()
+        await db.doc(`users/${uid}/sessions/${sessionId}`).update({ status: 'generating_images' })
+        fetch(`${baseUrl}/api/generate-images`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ uid, sessionId, beliefTree: { belief_nodes: [], session_summary: {} }, baseUrl }),
+        }).catch(() => {})
+      } catch {}
     }
     return NextResponse.json({ error: err.message }, { status: 500 })
   }

@@ -1,39 +1,6 @@
 import { NextResponse } from 'next/server'
 import { generateBeliefIllustration, generatePlaceholderImage } from '@/services/GeminiNano2Service'
-
-function firestoreBase() {
-  const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID
-  return `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents`
-}
-function firebaseKey() { return process.env.NEXT_PUBLIC_FIREBASE_API_KEY }
-
-async function patchDoc(path, fields) {
-  const base = firestoreBase()
-  const key = firebaseKey()
-  const typed = {}
-  for (const [k, v] of Object.entries(fields)) {
-    if (typeof v === 'string') typed[k] = { stringValue: v }
-    else if (typeof v === 'number') typed[k] = { integerValue: v }
-    else if (typeof v === 'boolean') typed[k] = { booleanValue: v }
-  }
-  const masks = Object.keys(fields).map(f => `updateMask.fieldPaths=${encodeURIComponent(f)}`).join('&')
-  const res = await fetch(`${base}/${path}?key=${key}&${masks}`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ fields: typed }),
-  })
-  if (!res.ok) console.error(`[Firestore PATCH] ${path} →`, res.status, await res.text())
-  return res.ok
-}
-
-async function listDocs(path) {
-  const base = firestoreBase()
-  const key = firebaseKey()
-  const res = await fetch(`${base}/${path}?key=${key}`)
-  if (!res.ok) { console.error('[Firestore LIST]', res.status); return [] }
-  const data = await res.json()
-  return data.documents || []
-}
+import { getAdminDb } from '@/services/FirebaseAdminService'
 
 export async function POST(request) {
   let uid, sessionId
@@ -44,13 +11,18 @@ export async function POST(request) {
     const beliefTree = body.beliefTree || {}
     // baseUrl passed from the calling route so we always hit the correct host
     const baseUrl = body.baseUrl || `${new URL(request.url).protocol}//${new URL(request.url).host}`
+
     if (!uid || !sessionId) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
+    const db = getAdminDb()
     const apiKey = process.env.GEMINI_API_KEY
     const nodes = beliefTree.belief_nodes || []
-    const beliefDocs = await listDocs(`users/${uid}/sessions/${sessionId}/beliefs`)
+
+    // Read existing belief docs so we can match and update them
+    const beliefsSnap = await db.collection(`users/${uid}/sessions/${sessionId}/beliefs`).get()
+    const beliefDocs = beliefsSnap.docs
 
     // ── Generate + save illustration for each belief node ────────────────────
     for (let i = 0; i < nodes.length; i++) {
@@ -69,13 +41,10 @@ export async function POST(request) {
         illustrationUrl = generatePlaceholderImage(node.belief, i)
       }
 
-      // Find matching Firestore doc
-      const targetDoc = beliefDocs[i] || beliefDocs.find(d =>
-        d.fields?.belief?.stringValue === node.belief
-      )
+      // Find matching Firestore doc by index or belief text
+      const targetDoc = beliefDocs[i] || beliefDocs.find(d => d.data()?.belief === node.belief)
       if (targetDoc) {
-        const docPath = targetDoc.name.split('/documents/')[1]
-        await patchDoc(docPath, {
+        await targetDoc.ref.update({
           illustration_url: illustrationUrl,
           written_analysis: node.written_analysis || '',
           narration_script: node.narration_script || '',
@@ -84,16 +53,14 @@ export async function POST(request) {
       }
     }
 
-    // ── Advance to generating_audio ───────────────────────────────────────────
-    await patchDoc(`users/${uid}/sessions/${sessionId}`, { status: 'generating_audio' })
-    console.log('[generate-images] Status → generating_audio')
-
-    // Store narration text
+    // ── Build narration text ──────────────────────────────────────────────────
     const narrationScripts = nodes.map(n => n.narration_script).filter(Boolean)
     const dominantTheme = beliefTree.session_summary?.dominant_theme || ''
-    const fullNarration = (dominantTheme ? `The thread connecting all your beliefs: ${dominantTheme}. ` : '') + narrationScripts.join(' ')
+    const fullNarration = (dominantTheme ? `The thread connecting all your beliefs: ${dominantTheme}. ` : '') +
+      narrationScripts.join(' ')
 
-    await patchDoc(`users/${uid}/sessions/${sessionId}`, {
+    // ── Advance to generating_pdf ─────────────────────────────────────────────
+    await db.doc(`users/${uid}/sessions/${sessionId}`).update({
       status: 'generating_pdf',
       narration_text: fullNarration,
     })
@@ -111,12 +78,16 @@ export async function POST(request) {
     console.error('[/api/generate-images] FATAL:', err)
     // Always advance so pipeline doesn't stall
     if (uid && sessionId) {
-      await patchDoc(`users/${uid}/sessions/${sessionId}`, { status: 'generating_pdf' }).catch(() => {})
-      fetch(`${baseUrl}/api/generate-pdf`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ uid, sessionId, beliefTree: {} }),
-      }).catch(() => {})
+      try {
+        const db = getAdminDb()
+        await db.doc(`users/${uid}/sessions/${sessionId}`).update({ status: 'generating_pdf' })
+        const baseUrl = body?.baseUrl || 'http://localhost:3000'
+        fetch(`${baseUrl}/api/generate-pdf`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ uid, sessionId, beliefTree: {} }),
+        }).catch(() => {})
+      } catch {}
     }
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
