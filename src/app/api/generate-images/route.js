@@ -42,6 +42,8 @@ export async function POST(request) {
     uid = body.uid
     sessionId = body.sessionId
     const beliefTree = body.beliefTree || {}
+    // baseUrl passed from the calling route so we always hit the correct host
+    const baseUrl = body.baseUrl || `${new URL(request.url).protocol}//${new URL(request.url).host}`
     if (!uid || !sessionId) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
@@ -98,7 +100,6 @@ export async function POST(request) {
     console.log('[generate-images] Status → generating_pdf')
 
     // ── Fire generate-pdf async ───────────────────────────────────────────────
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
     fetch(`${baseUrl}/api/generate-pdf`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -111,7 +112,6 @@ export async function POST(request) {
     // Always advance so pipeline doesn't stall
     if (uid && sessionId) {
       await patchDoc(`users/${uid}/sessions/${sessionId}`, { status: 'generating_pdf' }).catch(() => {})
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
       fetch(`${baseUrl}/api/generate-pdf`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

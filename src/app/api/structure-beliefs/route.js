@@ -51,6 +51,10 @@ function extractField(f) {
 
 // ── POST handler ───────────────────────────────────────────────────────────────
 export async function POST(request) {
+  // Derive baseUrl from the incoming request so we work in ALL environments
+  // (local dev, Cloud Run, etc.) without relying on NEXT_PUBLIC_APP_URL
+  const reqUrl = new URL(request.url)
+  const baseUrl = `${reqUrl.protocol}//${reqUrl.host}`
   let uid, sessionId
   try {
     const body = await request.json()
@@ -143,11 +147,10 @@ export async function POST(request) {
     console.log('[structure-beliefs] Status advanced to generating_images:', advanced)
 
     // ── 5. Fire generate-images async ─────────────────────────────────────────
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
     fetch(`${baseUrl}/api/generate-images`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ uid, sessionId, beliefTree }),
+      body: JSON.stringify({ uid, sessionId, beliefTree, baseUrl }),
     }).catch(e => console.error('[structure-beliefs] generate-images chain failed:', e))
 
     return NextResponse.json({ success: true, beliefCount: rawBeliefs.length, summary })
@@ -156,11 +159,10 @@ export async function POST(request) {
     // Emergency: still try to advance status so pipeline doesn't stay stuck
     if (uid && sessionId) {
       await patchDoc(`users/${uid}/sessions/${sessionId}`, { status: 'generating_images' }).catch(() => {})
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
       fetch(`${baseUrl}/api/generate-images`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ uid, sessionId, beliefTree: { belief_nodes: [], session_summary: {} } }),
+        body: JSON.stringify({ uid, sessionId, beliefTree: { belief_nodes: [], session_summary: {} }, baseUrl }),
       }).catch(() => {})
     }
     return NextResponse.json({ error: err.message }, { status: 500 })
