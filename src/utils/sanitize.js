@@ -25,11 +25,15 @@ function sanitizeText(text) {
 
 function sanitizeBeliefNode(node) {
   if (!node) return node
+  
+  // Remove any explicitly undefined fields from the AI JSON
+  const cleanNode = JSON.parse(JSON.stringify(node))
+  
   return {
-    ...node,
-    belief: sanitizeText(node.belief),
-    origin_event: sanitizeText(node.origin_event),
-    cost_today: sanitizeText(node.cost_today),
+    ...cleanNode,
+    belief: sanitizeText(cleanNode.belief || ''),
+    origin_event: sanitizeText(cleanNode.origin_event || ''),
+    cost_today: sanitizeText(cleanNode.cost_today || ''),
   }
 }
 
