@@ -300,7 +300,7 @@ export default function BeliefTreeMap({ beliefs = [], session = {} }) {
                 {isHov && (
                   <g transform={`translate(0, ${NODE_H + 8})`}>
                     <rect
-                      x="-8" y="0" width={NODE_W + 16} height="90" rx="12"
+                      x="-8" y="0" width={NODE_W + 16} height={belief.trigger_event ? 115 : 90} rx="12"
                       fill="rgba(7,10,18,0.96)" stroke={`${color}44`} strokeWidth="1"
                     />
                     <text x="10" y="20"
@@ -308,7 +308,7 @@ export default function BeliefTreeMap({ beliefs = [], session = {} }) {
                       fontFamily="Inter, sans-serif" letterSpacing="1">
                       THE CORE COST
                     </text>
-                    <foreignObject x="10" y="26" width={NODE_W - 4} height="60">
+                    <foreignObject x="10" y="26" width={NODE_W - 4} height="40">
                       <div
                         xmlns="http://www.w3.org/1999/xhtml"
                         style={{
@@ -322,6 +322,28 @@ export default function BeliefTreeMap({ beliefs = [], session = {} }) {
                         {belief.cost_today}
                       </div>
                     </foreignObject>
+                    {belief.trigger_event && (
+                      <>
+                        <text x="10" y="78"
+                          fill={color} fontSize="8.5" fontWeight="900"
+                          fontFamily="Inter, sans-serif" letterSpacing="1">
+                          MODERN TRIGGER
+                        </text>
+                        <foreignObject x="10" y="82" width={NODE_W - 4} height="30">
+                          <div
+                            xmlns="http://www.w3.org/1999/xhtml"
+                            style={{
+                              fontSize: '10px',
+                              color: '#94a3b8',
+                              lineHeight: 1.3,
+                              fontFamily: 'Inter, sans-serif',
+                            }}
+                          >
+                            {belief.trigger_event}
+                          </div>
+                        </foreignObject>
+                      </>
+                    )}
                   </g>
                 )}
               </g>

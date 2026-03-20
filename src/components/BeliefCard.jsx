@@ -50,9 +50,27 @@ export default function BeliefCard({ node, index }) {
         </div>
 
         {/* Belief statement */}
-        <h3 className="text-3xl font-display font-semibold text-slate-100 mb-4 leading-tight relative z-10">
+        <h3 className="text-3xl font-display font-semibold text-slate-100 mb-2 leading-tight relative z-10">
           "{node.belief}"
         </h3>
+
+        {/* Body & Trigger Info Row */}
+        {(node.body_sensation || node.trigger_event) && (
+          <div className="flex flex-wrap gap-4 mb-4 relative z-10">
+            {node.body_sensation && (
+              <div className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-lg border border-white/10">
+                <span className="text-[10px] font-bold text-accent/70 uppercase tracking-tighter">Felt in:</span>
+                <span className="text-sm text-slate-200">{node.body_sensation}</span>
+              </div>
+            )}
+            {node.trigger_event && (
+              <div className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-lg border border-white/10">
+                <span className="text-[10px] font-bold text-accent/70 uppercase tracking-tighter">Trigger:</span>
+                <span className="text-sm text-slate-200">{node.trigger_event}</span>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Written analysis */}
         {node.written_analysis && (
@@ -61,11 +79,29 @@ export default function BeliefCard({ node, index }) {
           </p>
         )}
 
+        {/* Seed Memory */}
+        {node.seed_memory && (
+          <div className="bg-white/5 rounded-lg p-4 border-l-2 border-accent/30 mb-4 relative z-10">
+            <p className="text-[10px] font-bold text-accent/70 uppercase tracking-widest mb-1">Seed Memory</p>
+            <p className="text-slate-400 text-sm italic tracking-tight leading-snug">"{node.seed_memory}"</p>
+          </div>
+        )}
+
         {/* Cost Today */}
         <div className="bg-surface rounded-lg p-4 border-l-2 border-accent/50 relative z-10 group-hover:border-accent transition-colors duration-300">
           <p className="text-sm font-bold text-accent uppercase tracking-widest mb-1">Cost Today</p>
           <p className="text-slate-300 text-base italic">{node.cost_today}</p>
         </div>
+
+        {/* Reframing Mantra */}
+        {node.reframing_mantra && (
+          <div className="mt-4 bg-accent/10 rounded-lg p-4 border border-accent/20 relative z-10 group-hover:bg-accent/15 transition-colors duration-300">
+            <p className="text-[10px] font-bold text-accent uppercase tracking-widest mb-1">New Mantra</p>
+            <p className="text-slate-100 text-lg font-display font-medium leading-tight">
+              "{node.reframing_mantra}"
+            </p>
+          </div>
+        )}
 
         {/* Emotional weight badge */}
         <div className="mt-4 flex items-center gap-2">
