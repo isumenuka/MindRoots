@@ -22,7 +22,7 @@ export default function InterviewPage() {
   const [sessionId, setLocalSessionId] = useState(null)
   const [agentStatus, setAgentStatus] = useState('connecting') // connecting | active | speaking | listening | ending
   const [showEndConfirm, setShowEndConfirm] = useState(false)
-  const [showTranscript, setShowTranscript] = useState(false)
+  const [showTranscript, setShowTranscript] = useState(true)
   const [showTextInput, setShowTextInput] = useState(false)
   const [textInput, setTextInput] = useState('')
   const [micError, setMicError] = useState(null)
@@ -280,6 +280,28 @@ export default function InterviewPage() {
           </button>
         </div>
       </header>
+
+      {/* Floating Extracted Beliefs Ticker */}
+      <div className="fixed right-6 top-28 bottom-28 z-40 flex flex-col gap-4 w-72 md:w-80 pointer-events-none overflow-hidden p-2 justify-start">
+        <AnimatePresence>
+          {beliefs.map((b, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, x: 100, scale: 0.9 }}
+              animate={{ opacity: 1, x: 0, scale: 1 }}
+              transition={{ type: 'spring', damping: 20, stiffness: 150 }}
+              className="bg-white/10 backdrop-blur-xl border border-[#818CF8]/50 p-4 rounded-2xl shadow-[0_0_40px_-10px_rgba(129,140,248,0.4)] relative overflow-hidden"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full animate-[shimmer_2s_infinite]" />
+              <div className="flex items-center gap-2 mb-2 relative z-10">
+                <span className="material-symbols-outlined text-[#818CF8] text-[16px] animate-pulse">local_fire_department</span>
+                <span className="text-[10px] text-[#818CF8] font-bold uppercase tracking-widest">Excavated Belief</span>
+              </div>
+              <p className="text-sm text-white font-medium leading-relaxed relative z-10">"{b.belief}"</p>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
 
       {/* Main */}
       <main className="relative z-10 flex-1 flex flex-col items-center justify-center px-6">

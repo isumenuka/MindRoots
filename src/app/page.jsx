@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { motion } from 'framer-motion'
 import { auth, signInWithGoogle, onAuthStateChanged, getUserDoc } from '@/services/FirebaseService'
 import useAppStore from '@/store/useAppStore'
 import AppLogo from '@/components/AppLogo'
@@ -154,26 +155,46 @@ export default function LandingPage() {
       {/* Hero */}
       <section suppressHydrationWarning className="relative pt-44 pb-24 overflow-hidden">
         <div suppressHydrationWarning className="max-w-5xl mx-auto px-6 text-center">
-          <div suppressHydrationWarning className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#818CF8]/10 border border-[#818CF8]/20 text-[#818CF8] text-[10px] font-bold uppercase tracking-widest mb-8">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, ease: "easeOut" }}
+            suppressHydrationWarning className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#818CF8]/10 border border-[#818CF8]/20 text-[#818CF8] text-[10px] font-bold uppercase tracking-widest mb-8"
+          >
             <span className="material-symbols-outlined text-sm">auto_awesome</span>
             AI-Driven Belief Archaeology
-          </div>
+          </motion.div>
 
-          <h1 className="text-5xl md:text-7xl font-display font-bold text-white mb-6 leading-tight">
+          <motion.h1 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.1, ease: "easeOut" }}
+            className="text-5xl md:text-7xl font-display font-bold text-white mb-6 leading-tight"
+          >
             What beliefs are<br />
             <span className="text-slate-400">silently running</span>{' '}
             <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#818CF8] to-[#a78bfa]">your life?</span>
-          </h1>
+          </motion.h1>
 
-          <p className="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed">
+          <motion.p 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2, ease: "easeOut" }}
+            className="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed"
+          >
             A voice conversation with an AI Socratic detective that excavates the exact origin moments behind your limiting beliefs — and delivers a stunning visual map of your mind's history.
-          </p>
+          </motion.p>
 
           {error && (
             <p className="text-red-400 text-sm mb-4">{error}</p>
           )}
 
-          <div suppressHydrationWarning className="flex flex-col sm:flex-row items-center justify-center gap-4">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.3, ease: "easeOut" }}
+            suppressHydrationWarning className="flex flex-col sm:flex-row items-center justify-center gap-4"
+          >
             <button
               onClick={() => {
                 if (user) {
@@ -183,18 +204,18 @@ export default function LandingPage() {
                 }
               }}
               disabled={signingIn}
-              className="w-full sm:w-auto px-8 py-4 bg-white text-black font-semibold rounded-xl flex items-center justify-center gap-2 hover:scale-105 transition-transform shadow-xl shadow-white/10 disabled:opacity-60"
+              className="w-full sm:w-auto px-8 py-4 bg-white text-black font-semibold rounded-xl flex items-center justify-center gap-2 hover:scale-105 transition-transform shadow-[0_0_30px_-5px_rgba(255,255,255,0.3)] hover:shadow-[0_0_40px_-5px_rgba(255,255,255,0.5)] disabled:opacity-60"
             >
               {signingIn ? 'Opening...' : (user ? 'Continue to Dashboard' : 'Begin Your Excavation')}
               <span className="material-symbols-outlined text-lg">arrow_outward</span>
             </button>
             <button 
               onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })} 
-              className="w-full sm:w-auto px-8 py-4 bg-white/5 border border-white/10 text-white font-medium rounded-xl hover:bg-white/10 transition-colors"
+              className="w-full sm:w-auto px-8 py-4 bg-white/5 border border-white/10 text-white font-medium rounded-xl hover:bg-white/10 transition-colors backdrop-blur-sm"
             >
               How it works
             </button>
-          </div>
+          </motion.div>
         </div>
       </section>
 
@@ -225,26 +246,38 @@ export default function LandingPage() {
 
       {/* 3-Step How it works */}
       <section suppressHydrationWarning id="how-it-works" className="py-20 max-w-7xl mx-auto px-6">
-        <div suppressHydrationWarning className="text-center mb-14">
+        <motion.div 
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true, margin: "-100px" }}
+          transition={{ duration: 0.8 }}
+          suppressHydrationWarning className="text-center mb-14"
+        >
           <h2 className="text-3xl md:text-4xl font-display font-bold text-white mb-4">How it works</h2>
           <p className="text-slate-500 max-w-xl mx-auto">Three AI agents working in sequence to excavate, structure, and illustrate your inner world.</p>
-        </div>
+        </motion.div>
         <div suppressHydrationWarning className="grid md:grid-cols-3 gap-6">
           {[
             { icon: 'mic', step: '01', title: 'Voice Interview', desc: 'A warm, persistent AI archaeologist asks "why" until it reaches the exact origin moment of each belief.' },
             { icon: 'account_tree', step: '02', title: 'Belief Structuring', desc: 'An AI data agent structures your raw beliefs into a validated Origin Tree with written analysis.' },
             { icon: 'auto_stories', step: '03', title: 'Your Map', desc: 'AI-generated illustrations, a narrated MP3 of your story, and a downloadable PDF of your Belief Origin Tree.' },
-          ].map((item) => (
-            <div suppressHydrationWarning key={item.step} className="glass-card p-8 rounded-2xl group hover:border-[#818CF8]/30 transition-all">
+          ].map((item, i) => (
+            <motion.div 
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-50px" }}
+              transition={{ duration: 0.6, delay: i * 0.2 }}
+              suppressHydrationWarning key={item.step} className="glass-card p-8 rounded-2xl group hover:border-[#818CF8]/50 transition-all hover:shadow-[0_0_30px_-5px_rgba(129,140,248,0.3)] bg-gradient-to-br from-white/[0.05] to-transparent"
+            >
               <div suppressHydrationWarning className="flex items-start justify-between mb-6">
-                <div suppressHydrationWarning className="w-12 h-12 bg-[#818CF8]/15 rounded-xl flex items-center justify-center border border-[#818CF8]/20">
-                  <span className="material-symbols-outlined text-[#818CF8]">{item.icon}</span>
+                <div suppressHydrationWarning className="w-12 h-12 bg-[#818CF8]/15 rounded-xl flex items-center justify-center border border-[#818CF8]/20 group-hover:scale-110 transition-transform">
+                  <span className="material-symbols-outlined text-[#818CF8] group-hover:drop-shadow-[0_0_8px_rgba(129,140,248,0.8)]">{item.icon}</span>
                 </div>
                 <span className="text-4xl font-display font-black text-white/5">{item.step}</span>
               </div>
               <h3 className="text-xl font-display font-bold text-white mb-3">{item.title}</h3>
               <p className="text-slate-500 text-sm leading-relaxed">{item.desc}</p>
-            </div>
+            </motion.div>
           ))}
         </div>
       </section>

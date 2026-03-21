@@ -112,6 +112,53 @@ export default function HistoryPage() {
             </button>
           </div>
 
+          {/* Sentiment Analytics Dashboard */}
+          {!loading && sessions.length > 0 && (
+            <div className="mb-12 glass-card rounded-3xl p-6 md:p-8 flex flex-col lg:flex-row gap-8 items-start lg:items-center">
+              <div className="flex-1 w-full">
+                <h2 className="text-xl font-display font-bold text-white mb-2 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[#818CF8]">monitoring</span>
+                  Sentiment Progression
+                </h2>
+                <p className="text-slate-400 text-sm mb-6">Your emotional journey over your recorded excavations.</p>
+                
+                {/* Visual Tracker Bar */}
+                <div className="h-4 w-full bg-white/5 rounded-full overflow-hidden flex shadow-inner">
+                  {sessions.slice().reverse().map((s, idx) => {
+                    const tone = s.overall_emotional_tone?.toLowerCase()
+                    const toneCfg = TONE_COLORS[tone] || TONE_COLORS.guarded
+                    return (
+                      <div 
+                        key={idx} 
+                        style={{ backgroundColor: toneCfg.text, width: `${100 / sessions.length}%` }}
+                        className="h-full border-r border-[#0A0A0A] hover:opacity-80 transition-opacity"
+                        title={`${s.created_at?.toDate?.()?.toLocaleDateString() || 'Session'} - ${s.overall_emotional_tone}`}
+                      />
+                    )
+                  })}
+                </div>
+                <div className="flex justify-between text-xs text-slate-500 font-semibold uppercase mt-3">
+                  <span>First Session</span>
+                  <span>Latest</span>
+                </div>
+              </div>
+
+              {/* Quick Stats */}
+              <div className="flex flex-wrap gap-4 w-full lg:w-auto shrink-0">
+                <div className="bg-white/5 border border-white/10 rounded-2xl p-5 min-w-[140px] flex flex-col justify-center">
+                  <span className="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-1">Total Excavations</span>
+                  <span className="text-3xl font-display font-black text-white">{sessions.length}</span>
+                </div>
+                <div className="bg-[#818CF8]/10 border border-[#818CF8]/20 rounded-2xl p-5 min-w-[140px] flex flex-col justify-center">
+                  <span className="text-[#818CF8] text-xs font-semibold uppercase tracking-wider mb-1">Total Beliefs</span>
+                  <span className="text-3xl font-display font-black text-[#818CF8]">
+                    {sessions.reduce((acc, curr) => acc + (curr.total_beliefs || 0), 0)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Session grid */}
           {loading ? (
             <div className="flex flex-col items-center justify-center py-24">
