@@ -4,15 +4,27 @@ MindRoots — Gemini Live API Backend
 Provides configuration endpoints and ephemeral token generation.
 """
 
+import io
 import os
 import json
 import datetime
 from fastapi import FastAPI, HTTPException, Header  # type: ignore
+from fastapi.responses import StreamingResponse  # type: ignore
 from pydantic import BaseModel  # type: ignore
-from typing import Optional
+from typing import Any, Optional
 from fastapi.middleware.cors import CORSMiddleware  # type: ignore
 from google import genai  # type: ignore
 from dotenv import load_dotenv  # type: ignore
+
+# ReportLab — PDF generation (pdf skill)
+from reportlab.lib.pagesizes import A4  # type: ignore
+from reportlab.lib.units import mm  # type: ignore
+from reportlab.lib import colors  # type: ignore
+from reportlab.platypus import (  # type: ignore
+    SimpleDocTemplate, Paragraph, Spacer, HRFlowable, PageBreak, KeepTogether
+)
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle  # type: ignore
+from reportlab.lib.enums import TA_LEFT, TA_CENTER  # type: ignore
 
 # ─── Config ────────────────────────────────────────────────────────────────
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), ".env"))
@@ -180,6 +192,111 @@ async def get_ephemeral_token():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ─── PDF Generation (pdf skill — reportlab) ────────────────────────────────
+
+class PdfRequest(BaseModel):
+    beliefTree: Any  # full belief tree JSON from GeminiFlashService
+
+
+def _build_belief_pdf(belief_tree: dict) -> bytes:
+    """Render a Belief Origin Tree PDF using reportlab."""
+    buf = io.BytesIO()
+    summary = belief_tree.get("session_summary", {})
+    nodes   = belief_tree.get("belief_nodes", [])
+    date_str = datetime.date.today().strftime("%B %d, %Y")
+
+    doc = SimpleDocTemplate(
+        buf, pagesize=A4,
+        leftMargin=20*mm, rightMargin=20*mm,
+        topMargin=18*mm, bottomMargin=18*mm,
+    )
+
+    base = getSampleStyleSheet()
+    brand   = ParagraphStyle("brand",   fontSize=7,  textColor=colors.HexColor("#818CF8"), spaceAfter=4,  letterSpacing=2)
+    title_s = ParagraphStyle("title_s", fontSize=24, textColor=colors.white,               spaceAfter=4,  fontName="Helvetica-Bold")
+    sub_s   = ParagraphStyle("sub_s",   fontSize=9,  textColor=colors.HexColor("#6B7280"), spaceAfter=16)
+    meta_s  = ParagraphStyle("meta_s",  fontSize=7,  textColor=colors.HexColor("#818CF8"), spaceAfter=4,  letterSpacing=2)
+    belief_s= ParagraphStyle("belief_s",fontSize=14, textColor=colors.HexColor("#F9FAFB"), spaceAfter=6,  fontName="Helvetica-Bold", leading=18)
+    anal_s  = ParagraphStyle("anal_s",  fontSize=9,  textColor=colors.HexColor("#9CA3AF"), spaceAfter=8,  leading=14)
+    cost_lbl= ParagraphStyle("cost_lbl",fontSize=7,  textColor=colors.HexColor("#818CF8"), spaceAfter=2,  letterSpacing=2)
+    cost_s  = ParagraphStyle("cost_s",  fontSize=9,  textColor=colors.HexColor("#D1D5DB"), spaceAfter=0,  fontName="Helvetica-Oblique")
+    mantra_s= ParagraphStyle("mantra_s",fontSize=9,  textColor=colors.HexColor("#4ADE80"), spaceAfter=0,  fontName="Helvetica-Oblique")
+    sum_lbl = ParagraphStyle("sum_lbl", fontSize=7,  textColor=colors.HexColor("#818CF8"), spaceAfter=3,  letterSpacing=2)
+    sum_val = ParagraphStyle("sum_val", fontSize=10, textColor=colors.HexColor("#E5E7EB"), spaceAfter=8)
+    footer_s= ParagraphStyle("footer_s",fontSize=6,  textColor=colors.HexColor("#333333"), alignment=TA_CENTER, letterSpacing=2)
+
+    story = []
+
+    # ── Header ──
+    story.append(Paragraph("MINDROOTS — BELIEF ARCHAEOLOGY REPORT", brand))
+    story.append(Paragraph(summary.get("dominant_theme") or "Belief Origin Tree", title_s))
+    story.append(Paragraph(f"{date_str} · {len(nodes)} Core Belief{'s' if len(nodes) != 1 else ''} Excavated", sub_s))
+    story.append(HRFlowable(width="100%", thickness=0.5, color=colors.HexColor("#222222"), spaceAfter=14))
+
+    # ── Belief cards ──
+    for i, node in enumerate(nodes):
+        weight_color = {
+            "profound": "#F87171", "high": "#FB923C",
+            "medium":   "#FACC15", "low":  "#4ADE80"
+        }.get((node.get("emotional_weight") or "").lower(), "#818CF8")
+
+        card = [
+            Paragraph(
+                f"{str(i+1).zfill(2)} · "
+                f"ORIGIN: {node.get('origin_year','?')} · "
+                f"AGE {node.get('age_at_origin','?')} · "
+                f"{(node.get('origin_person') or 'Unknown').upper()}",
+                meta_s
+            ),
+            Paragraph(f'"{node.get("belief","")}"', belief_s),
+        ]
+        if node.get("written_analysis"):
+            card.append(Paragraph(node["written_analysis"], anal_s))
+        if node.get("cost_today"):
+            card.append(Paragraph("COST TODAY", cost_lbl))
+            card.append(Paragraph(node["cost_today"], cost_s))
+        if node.get("reframing_mantra"):
+            card.append(Spacer(1, 4))
+            card.append(Paragraph(f"✦ {node['reframing_mantra']}", mantra_s))
+
+        story.append(KeepTogether(card))
+        story.append(HRFlowable(width="100%", thickness=0.3, color=colors.HexColor("#1a1a1a"), spaceAfter=14, spaceBefore=10))
+
+    # ── Session Summary ──
+    if summary:
+        story.append(Spacer(1, 6))
+        story.append(Paragraph("SESSION SUMMARY", sum_lbl))
+        if summary.get("overall_emotional_tone"):
+            story.append(Paragraph(f"Emotional Tone: {summary['overall_emotional_tone'].title()}", sum_val))
+        if summary.get("estimated_total_cost"):
+            story.append(Paragraph(f"Total Cost: {summary['estimated_total_cost']}", sum_val))
+        if summary.get("dominant_theme"):
+            story.append(Paragraph(f"Dominant Theme: {summary['dominant_theme']}", sum_val))
+
+    # ── Footer ──
+    story.append(Spacer(1, 20))
+    story.append(Paragraph("MINDROOTS INTROSPECTIVE SYSTEMS · CONFIDENTIAL", footer_s))
+
+    doc.build(story)
+    buf.seek(0)
+    return buf.read()
+
+
+@app.post("/api/generate-pdf")
+async def generate_pdf(req: PdfRequest):
+    """Generate a Belief Origin Tree PDF from the provided belief tree JSON."""
+    try:
+        pdf_bytes = _build_belief_pdf(req.beliefTree)
+        return StreamingResponse(
+            io.BytesIO(pdf_bytes),
+            media_type="application/pdf",
+            headers={"Content-Disposition": 'attachment; filename="mindroots-report.pdf"'},
+        )
+    except Exception as e:
+        print(f"[PDF] Error generating PDF: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/health")
 async def health():
     return {"status": "ok"}
@@ -194,7 +311,8 @@ async def root():
             "health": "/health",
             "config_get": "GET /api/config",
             "config_post": "POST /api/config",
-            "token": "POST /api/token"
+            "token": "POST /api/token",
+            "generate_pdf": "POST /api/generate-pdf"
         }
     }
 

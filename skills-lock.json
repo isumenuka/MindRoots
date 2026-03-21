@@ -15,6 +15,11 @@
       "source": "google-gemini/gemini-skills",
       "sourceType": "github",
       "computedHash": "8dd671e973cafb4df3683aea49fc6ae1a685b65aede1c5bbc89299ec4e3648b2"
+    },
+    "pdf": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "computedHash": "37226d4220d844377e6b2a386c51a011df4cd130855ff0b80bcc22f9c28abd57"
     }
   }
 }
