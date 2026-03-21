@@ -121,11 +121,13 @@ class GeminiLiveService {
               if (!this._outputTranscriptBuffer) {
                 // First chunk: create an empty bubble then stream into it
                 this._outputTranscriptBuffer = chunk
-                this.onTranscript?.({ role: 'assistant', text: chunk })
+                const displayText = this._stripBeliefNodes(chunk)
+                if (displayText) this.onTranscript?.({ role: 'assistant', text: displayText })
               } else {
                 // Subsequent chunks: append to existing bubble
                 this._outputTranscriptBuffer += chunk
-                this.onTranscriptChunk?.(chunk)
+                const displayChunk = this._stripBeliefNodes(chunk)
+                if (displayChunk) this.onTranscriptChunk?.(displayChunk)
               }
             }
           } else if (msg.setupComplete) {
@@ -207,6 +209,18 @@ class GeminiLiveService {
     }
     
     return setup
+  }
+
+  // Strip BELIEF_NODE: {...} blocks from text shown in the chat UI.
+  // The raw buffer is kept intact for _parseBeliefNodes to process.
+  _stripBeliefNodes(text) {
+    // Remove complete BELIEF_NODE blocks (greedy across newlines)
+    return text
+      .replace(/BELIEF_NODE:\s*\{[\s\S]*?\}/g, '')
+      // Also strip any orphaned leading/trailing backticks or blank lines
+      .replace(/`/g, '')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim()
   }
 
   // Parse out Socratic Belief Nodes from raw AI output manually!
