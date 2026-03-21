@@ -4,7 +4,7 @@
  */
 import { GoogleGenAI } from '@google/genai'
 
-const FLASH_MODEL = 'gemini-2.0-flash'
+const FLASH_MODEL = 'gemini-2.5-flash'
 
 const STRUCTURER_SYSTEM_PROMPT = `You are the Data Structurer. You receive raw belief node data extracted from a voice interview and produce a complete, validated Belief Origin Tree JSON graph.
 

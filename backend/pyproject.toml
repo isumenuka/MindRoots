@@ -9,4 +9,5 @@ dependencies = [
     "google-genai>=1.66.0",
     "python-dotenv>=1.2.2",
     "uvicorn[standard]>=0.41.0",
+    "reportlab>=4.0.0",
 ]
