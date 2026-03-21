@@ -21,7 +21,8 @@ from reportlab.lib.pagesizes import A4  # type: ignore
 from reportlab.lib.units import mm  # type: ignore
 from reportlab.lib import colors  # type: ignore
 from reportlab.platypus import (  # type: ignore
-    SimpleDocTemplate, Paragraph, Spacer, HRFlowable, PageBreak, KeepTogether
+    SimpleDocTemplate, Paragraph, Spacer, HRFlowable, PageBreak, KeepTogether,
+    Flowable, Table, TableStyle
 )
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle  # type: ignore
 from reportlab.lib.enums import TA_LEFT, TA_CENTER  # type: ignore
@@ -198,6 +199,38 @@ class PdfRequest(BaseModel):
     beliefTree: Any  # full belief tree JSON from GeminiFlashService
 
 
+# MindRootsLogo flowable removed in favor of real image asset
+
+
+def draw_background(canvas, doc):
+    canvas.saveState()
+    # Dark Mode Background (#0A0A0A)
+    canvas.setFillColor(colors.HexColor("#0A0A0A"))
+    canvas.rect(0, 0, doc.pagesize[0], doc.pagesize[1], stroke=0, fill=1)
+    
+    # Subtle Page Numbers
+    canvas.setFillColor(colors.HexColor("#374151")) # Dark gray
+    canvas.setFont("Helvetica", 7)
+    canvas.drawCentredString(doc.pagesize[0]/2, 10*mm, f"PAGE {doc.page}")
+    
+    # Watermark (Rotated & Very Faint)
+    canvas.translate(doc.pagesize[0] / 2, doc.pagesize[1] / 2)
+    canvas.rotate(45)
+    canvas.setFillColor(colors.Color(1, 1, 1, alpha=0.025))
+    canvas.setFont("Helvetica-Bold", 72)
+    canvas.drawCentredString(0, 0, "M I N D R O O T S")
+    
+    # Border
+    canvas.restoreState()
+    canvas.saveState()
+    # Gradient-like thin border using purple/indigo (#818CF8)
+    canvas.setStrokeColor(colors.Color(129/255, 140/255, 248/255, alpha=0.25))
+    canvas.setLineWidth(0.5)
+    margin = 8 * mm
+    canvas.roundRect(margin, margin, doc.pagesize[0] - 2*margin, doc.pagesize[1] - 2*margin, 4)
+    canvas.restoreState()
+
+
 def _build_belief_pdf(belief_tree: dict) -> bytes:
     """Render a Belief Origin Tree PDF using reportlab."""
     buf = io.BytesIO()
@@ -211,56 +244,82 @@ def _build_belief_pdf(belief_tree: dict) -> bytes:
         topMargin=18*mm, bottomMargin=18*mm,
     )
 
-    base = getSampleStyleSheet()
-    brand   = ParagraphStyle("brand",   fontSize=7,  textColor=colors.HexColor("#818CF8"), spaceAfter=4,  letterSpacing=2)
-    title_s = ParagraphStyle("title_s", fontSize=24, textColor=colors.white,               spaceAfter=4,  fontName="Helvetica-Bold")
-    sub_s   = ParagraphStyle("sub_s",   fontSize=9,  textColor=colors.HexColor("#6B7280"), spaceAfter=16)
-    meta_s  = ParagraphStyle("meta_s",  fontSize=7,  textColor=colors.HexColor("#818CF8"), spaceAfter=4,  letterSpacing=2)
-    belief_s= ParagraphStyle("belief_s",fontSize=14, textColor=colors.HexColor("#F9FAFB"), spaceAfter=6,  fontName="Helvetica-Bold", leading=18)
-    anal_s  = ParagraphStyle("anal_s",  fontSize=9,  textColor=colors.HexColor("#9CA3AF"), spaceAfter=8,  leading=14)
-    cost_lbl= ParagraphStyle("cost_lbl",fontSize=7,  textColor=colors.HexColor("#818CF8"), spaceAfter=2,  letterSpacing=2)
-    cost_s  = ParagraphStyle("cost_s",  fontSize=9,  textColor=colors.HexColor("#D1D5DB"), spaceAfter=0,  fontName="Helvetica-Oblique")
-    mantra_s= ParagraphStyle("mantra_s",fontSize=9,  textColor=colors.HexColor("#4ADE80"), spaceAfter=0,  fontName="Helvetica-Oblique")
-    sum_lbl = ParagraphStyle("sum_lbl", fontSize=7,  textColor=colors.HexColor("#818CF8"), spaceAfter=3,  letterSpacing=2)
+    # ── Style Definitions ──
+    brand_s = ParagraphStyle("brand_s", fontSize=9, textColor=colors.HexColor("#818CF8"), fontName="Helvetica-Bold", letterSpacing=1.5)
+    title_s = ParagraphStyle("title_s", fontSize=24, textColor=colors.white, spaceAfter=2, fontName="Helvetica-Bold", leading=28)
+    sub_s   = ParagraphStyle("sub_s",   fontSize=9, textColor=colors.HexColor("#9CA3AF"), spaceAfter=24, fontName="Helvetica-Oblique")
+    
+    card_idx = ParagraphStyle("card_idx", fontSize=8, textColor=colors.HexColor("#818CF8"), fontName="Helvetica-Bold", alignment=TA_CENTER)
+    meta_s   = ParagraphStyle("meta_s",   fontSize=7, textColor=colors.HexColor("#818CF8"), letterSpacing=1.5, fontName="Helvetica-Bold")
+    belief_s = ParagraphStyle("belief_s", fontSize=15, textColor=colors.white, fontName="Helvetica-Bold", leading=18, spaceAfter=8)
+    anal_s   = ParagraphStyle("anal_s",   fontSize=10, textColor=colors.HexColor("#D1D5DB"), leading=14, spaceAfter=10)
+    
+    label_s  = ParagraphStyle("label_s",  fontSize=6, textColor=colors.HexColor("#9CA3AF"), fontName="Helvetica-Bold", letterSpacing=2, spaceBefore=4)
+    cost_s   = ParagraphStyle("cost_s",   fontSize=9, textColor=colors.HexColor("#F87171"), fontName="Helvetica-Oblique", leading=12)
+    mantra_s = ParagraphStyle("mantra_s", fontSize=11, textColor=colors.HexColor("#4ADE80"), fontName="Helvetica-BoldOblique", leading=14)
+    
+    sum_lbl = ParagraphStyle("sum_lbl", fontSize=7,  textColor=colors.HexColor("#818CF8"), spaceAfter=3,  letterSpacing=2, fontName="Helvetica-Bold")
     sum_val = ParagraphStyle("sum_val", fontSize=10, textColor=colors.HexColor("#E5E7EB"), spaceAfter=8)
-    footer_s= ParagraphStyle("footer_s",fontSize=6,  textColor=colors.HexColor("#333333"), alignment=TA_CENTER, letterSpacing=2)
+    footer_s= ParagraphStyle("footer_s",fontSize=6,  textColor=colors.HexColor("#4B5563"), alignment=TA_CENTER, letterSpacing=2)
 
     story = []
 
     # ── Header ──
-    story.append(Paragraph("MINDROOTS — BELIEF ARCHAEOLOGY REPORT", brand))
-    story.append(Paragraph(summary.get("dominant_theme") or "Belief Origin Tree", title_s))
-    story.append(Paragraph(f"{date_str} · {len(nodes)} Core Belief{'s' if len(nodes) != 1 else ''} Excavated", sub_s))
-    story.append(HRFlowable(width="100%", thickness=0.5, color=colors.HexColor("#222222"), spaceAfter=14))
+    story.append(Paragraph("MINDROOTS", brand_s))
+    story.append(Spacer(1, 10))
+    
+    story.append(Paragraph(summary.get("dominant_theme") or "Belief Archaeology Report", title_s))
+    story.append(Paragraph(f"{date_str} · Generated for deep self-reflection", sub_s))
+    story.append(Spacer(1, 4))
+    story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor("#1F2937"), spaceAfter=24))
 
-    # ── Belief cards ──
+    # ── Belief Cards ──
     for i, node in enumerate(nodes):
-        weight_color = {
-            "profound": "#F87171", "high": "#FB923C",
-            "medium":   "#FACC15", "low":  "#4ADE80"
-        }.get((node.get("emotional_weight") or "").lower(), "#818CF8")
-
-        card = [
-            Paragraph(
-                f"{str(i+1).zfill(2)} · "
-                f"ORIGIN: {node.get('origin_year','?')} · "
-                f"AGE {node.get('age_at_origin','?')} · "
-                f"{(node.get('origin_person') or 'Unknown').upper()}",
-                meta_s
-            ),
-            Paragraph(f'"{node.get("belief","")}"', belief_s),
-        ]
+        # Card Body (multi-line story)
+        card_story = []
+        
+        # Meta info row
+        origin = f"ORIGIN // {node.get('origin_year','?')}  ·  AGE {node.get('age_at_origin','?')}  ·  {(node.get('origin_person') or 'Unknown').upper()}"
+        card_story.append(Paragraph(origin, meta_s))
+        card_story.append(Spacer(1, 8))
+        
+        # Primary Belief
+        card_story.append(Paragraph(f'"{node.get("belief","")}"', belief_s))
+        
+        # Analysis
         if node.get("written_analysis"):
-            card.append(Paragraph(node["written_analysis"], anal_s))
+            card_story.append(Paragraph(node["written_analysis"], anal_s))
+        
+        # Cost & Mantra with subtle background/borders
+        extras = []
         if node.get("cost_today"):
-            card.append(Paragraph("COST TODAY", cost_lbl))
-            card.append(Paragraph(node["cost_today"], cost_s))
+            extras.append([Paragraph("COST TODAY", label_s), Paragraph(node["cost_today"], cost_s)])
         if node.get("reframing_mantra"):
-            card.append(Spacer(1, 4))
-            card.append(Paragraph(f"✦ {node['reframing_mantra']}", mantra_s))
+            extras.append([Paragraph("NEW MANTRA", label_s), Paragraph(node["reframing_mantra"], mantra_s)])
+        
+        if extras:
+            extras_table = Table(extras, colWidths=[100, 300])
+            extras_table.setStyle(TableStyle([
+                ('TOPPADDING', (0,0), (-1,-1), 8),
+                ('BOTTOMPADDING', (0,0), (-1,-1), 8),
+                ('VALIGN', (0,0), (-1,-1), 'TOP'),
+                ('LINEABOVE', (0,1), (-1,1), 0.5, colors.HexColor("#1F2937")),
+            ]))
+            card_story.append(extras_table)
 
-        story.append(KeepTogether(card))
-        story.append(HRFlowable(width="100%", thickness=0.3, color=colors.HexColor("#1a1a1a"), spaceAfter=14, spaceBefore=10))
+        # Wrap each card in a Table for structure (index on left, content on right)
+        card_wrapper = Table([[Paragraph(str(i+1).zfill(2), card_idx), card_story]], colWidths=[30, 440])
+        card_wrapper.setStyle(TableStyle([
+            ('VALIGN', (0,0), (-1,-1), 'TOP'),
+            ('TOPPADDING', (0,0), (-1,-1), 10),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 15),
+            ('BACKGROUND', (0,0), (-1,-1), colors.HexColor("#0F1115")), # Slightly lighter than bg
+            ('ROUNDEDCORNERS', [8, 8, 8, 8]),
+        ]))
+        
+        story.append(KeepTogether(card_wrapper))
+        story.append(Spacer(1, 16))
+        story.append(HRFlowable(width="100%", thickness=0.5, color=colors.HexColor("#1F2937"), spaceAfter=18, spaceBefore=4))
 
     # ── Session Summary ──
     if summary:
@@ -274,10 +333,10 @@ def _build_belief_pdf(belief_tree: dict) -> bytes:
             story.append(Paragraph(f"Dominant Theme: {summary['dominant_theme']}", sum_val))
 
     # ── Footer ──
-    story.append(Spacer(1, 20))
+    story.append(Spacer(1, 25))
     story.append(Paragraph("MINDROOTS INTROSPECTIVE SYSTEMS · CONFIDENTIAL", footer_s))
 
-    doc.build(story)
+    doc.build(story, onFirstPage=draw_background, onLaterPages=draw_background)
     buf.seek(0)
     return buf.read()
 

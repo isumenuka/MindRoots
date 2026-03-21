@@ -59,9 +59,9 @@ export async function POST(request) {
         session_summary: {
           total_beliefs_found: rawBeliefs.length,
           oldest_belief_year: Math.min(...rawBeliefs.map(b => b.origin_year || 2000)),
-          dominant_theme: 'A pattern of inherited beliefs shaping daily choices',
+          dominant_theme: rawBeliefs.length > 0 ? `Uncovering beliefs about ${rawBeliefs[0].origin_person || 'the past'}` : 'A pattern of inherited beliefs shaping daily choices',
           estimated_total_cost: 'Significant emotional and relational cost',
-          overall_emotional_tone: 'guarded',
+          overall_emotional_tone: 'reflective',
         },
         belief_nodes: rawBeliefs.map((b, i) => ({
           id: `belief_${i + 1}`,
