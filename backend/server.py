@@ -7,6 +7,7 @@ Provides configuration endpoints and ephemeral token generation.
 import io
 import os
 import json
+import wave
 import datetime
 from fastapi import FastAPI, HTTPException, Header  # type: ignore
 from fastapi.responses import StreamingResponse  # type: ignore
@@ -113,6 +114,14 @@ app.add_middleware(
 )
 
 
+class TtsRequest(BaseModel):
+    text: str
+    voice: Optional[str] = "Puck"
+    style: Optional[str] = None
+    speed: Optional[float] = None
+    pitch: Optional[float] = None
+
+
 class ConfigUpdate(BaseModel):
     model: Optional[str] = None
     voice: Optional[str] = None
@@ -135,7 +144,6 @@ class ConfigUpdate(BaseModel):
 async def get_config():
     """Return current live config."""
     config_out = dict(live_config)
-    # If system_prompt hasn't been set by admin, or if it matches the fallback, read it from file
     prompt_str = str(get_system_prompt())
     if not config_out.get("system_prompt"):
         config_out["system_prompt"] = prompt_str
@@ -174,16 +182,12 @@ class TokenRequest(BaseModel):
 
 @app.post("/api/token")
 async def get_ephemeral_token(req: TokenRequest = None):
-    """Generates an ephemeral token for the Gemini Live API.
-    Accepts an optional api_key in the request body — uses it instead of the server key.
-    """
+    """Generates an ephemeral token for the Gemini Live API."""
     try:
-        # Use user-provided key if present, otherwise fall back to server key
         api_key = (req.api_key if req and req.api_key else None) or GEMINI_API_KEY
         if not api_key:
             raise HTTPException(status_code=400, detail="No Gemini API key available")
 
-        # Create a per-request client with the correct key
         request_client = genai.Client(
             api_key=api_key,
             http_options={"api_version": "v1alpha"},
@@ -205,10 +209,70 @@ async def get_ephemeral_token(req: TokenRequest = None):
             "token": token.name,
             "expires_at": expire_time.isoformat()
         }
-    except HTTPException:
-        raise
     except Exception as e:
         print(f"Error generating ephemeral token: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/tts")
+async def text_to_speech(req: TtsRequest):
+    """
+    Generate premium audio narration using Gemini 2.5 Flash Preview TTS.
+    """
+    try:
+        if not req.text:
+            raise HTTPException(status_code=400, detail="Text is required")
+
+        prompt = req.text
+        if req.style:
+            prompt = f"(Director's Notes: {req.style})\n{req.text}"
+
+        response = client.models.generate_content(
+            model="gemini-2.5-flash-preview-tts",
+            contents=prompt,
+            config={
+                "response_modalities": ["AUDIO"],
+                "speech_config": {
+                    "voice_config": {
+                        "prebuilt_voice_config": {
+                            "voice_name": req.voice or "Puck"
+                        }
+                    }
+                }
+            }
+        )
+
+        audio_bytes = None
+        if hasattr(response, 'candidates') and response.candidates:
+            parts = response.candidates[0].content.parts
+            for part in parts:
+                if hasattr(part, 'inline_data') and part.inline_data.mime_type.startswith('audio'):
+                    audio_bytes = part.inline_data.data
+                    break
+        
+        if not audio_bytes and hasattr(response, 'audio'):
+            audio_bytes = response.audio
+
+        if not audio_bytes:
+            print(f"[TTS] No audio in response: {response}")
+            raise HTTPException(status_code=500, detail="Gemini failed to generate audio")
+
+        # Wrap raw PCM bytes in a WAV header for browser playability
+        wav_io = io.BytesIO()
+        with wave.open(wav_io, 'wb') as wav_file:
+            wav_file.setnchannels(1)
+            wav_file.setsampwidth(2) # 16-bit
+            wav_file.setframerate(24000)
+            wav_file.writeframes(audio_bytes)
+        
+        return StreamingResponse(
+            io.BytesIO(wav_io.getvalue()),
+            media_type="audio/wav",
+            headers={"Content-Disposition": 'attachment; filename="narration.wav"'}
+        )
+
+    except Exception as e:
+        print(f"[TTS] Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

@@ -1,5 +1,7 @@
 'use client'
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { ttsService } from '@/services/TTSService'
+import { getNodeDisplayInfo } from '@/utils/nodeTypes'
 
 function AmbientRoots() {
   return (
@@ -36,17 +38,18 @@ const WEIGHT_COLORS = {
   profound: '#f87171', high: '#fb923c', medium: '#facc15', low: '#4ade80',
 }
 
-import { getNodeDisplayInfo } from '@/utils/nodeTypes'
-
 export default function NarrationModal({ beliefs = [], session = {}, narrationText = '', onClose }) {
   const [currentIdx, setCurrentIdx] = useState(-1) // -1 = intro
   const [isPlaying, setIsPlaying] = useState(false)
   const [progress, setProgress] = useState(0)
   const [showBeliefs, setShowBeliefs] = useState([])
-  const utterRef = useRef(null)
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [audioUrl, setAudioUrl] = useState(null)
+  
+  const audioRef = useRef(null)
   const intervalRef = useRef(null)
   const startRef = useRef(null)
-  const durRef = useRef(1)
+  const durRef = useRef(0)
 
   // Build full narration script
   const fullScript = narrationText ||
@@ -65,12 +68,18 @@ export default function NarrationModal({ beliefs = [], session = {}, narrationTe
   })
 
   const stopAll = useCallback(() => {
-    window.speechSynthesis?.cancel()
-    clearInterval(intervalRef.current)
+    if (audioRef.current) {
+      audioRef.current.pause()
+    }
     setIsPlaying(false)
   }, [])
 
-  useEffect(() => () => stopAll(), [stopAll])
+  useEffect(() => {
+    return () => {
+      stopAll()
+      if (audioUrl) URL.revokeObjectURL(audioUrl)
+    }
+  }, [stopAll, audioUrl])
 
   // Sync belief cards to narration progress
   const startProgressTracker = (estimated) => {
@@ -97,36 +106,65 @@ export default function NarrationModal({ beliefs = [], session = {}, narrationTe
     }, 200)
   }
 
-  const handlePlay = () => {
-    if (isPlaying) { stopAll(); return }
-    stopAll()
-    const words = fullScript.split(/\s+/).length
-    const est = Math.max((words / 135) * 60, 10)
-    setProgress(0); setCurrentIdx(-1); setShowBeliefs([])
-
-    const utter = new SpeechSynthesisUtterance(fullScript)
-    utter.rate = 0.88
-    utter.pitch = 0.95
-    utter.volume = 1
-    const voices = window.speechSynthesis.getVoices()
-    const preferred = voices.find(v =>
-      v.name.includes('Google') || v.name.includes('Daniel') ||
-      v.name.includes('Samantha') || v.name.includes('Karen')
-    )
-    if (preferred) utter.voice = preferred
-
-    utter.onend = () => {
-      clearInterval(intervalRef.current)
+  const handlePlay = async () => {
+    if (isPlaying) {
+      audioRef.current?.pause()
       setIsPlaying(false)
-      setProgress(100)
-      setCurrentIdx(beliefs.length)
+      return
     }
-    utter.onerror = () => { clearInterval(intervalRef.current); setIsPlaying(false) }
 
-    utterRef.current = utter
-    window.speechSynthesis.speak(utter)
-    setIsPlaying(true)
-    startProgressTracker(est)
+    if (audioUrl && audioRef.current) {
+      audioRef.current.play()
+      setIsPlaying(true)
+      return
+    }
+
+    // Generate audio for the first time
+    try {
+      setIsGenerating(true)
+      const url = await ttsService.generateAudio(fullScript, {
+        voice: 'Puck',
+        style: 'A wise, empathetic narrator uncovering deep psychological roots. Calm yet profound tone.'
+      })
+      setAudioUrl(url)
+      
+      const audio = new Audio(url)
+      audioRef.current = audio
+      
+      audio.onloadedmetadata = () => {
+        durRef.current = audio.duration
+      }
+
+      audio.ontimeupdate = () => {
+        const pct = (audio.currentTime / audio.duration) * 100
+        setProgress(pct)
+
+        // Advance belief cards based on progress
+        const beliefDuration = audio.duration / Math.max(beliefs.length + 2, 1)
+        const introDuration = beliefDuration
+        const beliefIdx = Math.floor((audio.currentTime - introDuration) / beliefDuration)
+        
+        if (beliefIdx >= -1 && beliefIdx < beliefs.length) {
+          setCurrentIdx(beliefIdx)
+          if (beliefIdx >= 0 && !showBeliefs.includes(beliefIdx)) {
+            setShowBeliefs(prev => [...new Set([...prev, beliefIdx])])
+          }
+        }
+      }
+
+      audio.onended = () => {
+        setIsPlaying(false)
+        setProgress(100)
+        setCurrentIdx(beliefs.length)
+      }
+
+      await audio.play()
+      setIsPlaying(true)
+    } catch (error) {
+      console.error('Failed to play narration:', error)
+    } finally {
+      setIsGenerating(false)
+    }
   }
 
   const handleClose = () => { stopAll(); onClose?.() }
@@ -237,9 +275,9 @@ export default function NarrationModal({ beliefs = [], session = {}, narrationTe
               boxShadow: isPlaying ? 'none' : '0 0 20px rgba(129,140,248,0.3)'
             }}>
             <span className="material-symbols-outlined text-[18px]">
-              {isPlaying ? 'pause' : 'play_arrow'}
+              {isGenerating ? 'sync' : isPlaying ? 'pause' : 'play_arrow'}
             </span>
-            {isPlaying ? 'Pause' : progress > 0 ? 'Resume' : 'Play Documentary'}
+            {isGenerating ? 'Generating Audio...' : isPlaying ? 'Pause' : progress > 0 ? 'Resume' : 'Play Documentary'}
           </button>
 
           <span className="text-[10px] text-slate-600 font-mono">
