@@ -110,7 +110,9 @@ export default function NarrationModal({ beliefs = [], session = {}, narrationTe
     return () => {
       stopAll()
       if (audioUrl) URL.revokeObjectURL(audioUrl)
-      if (audioCtxRef.current) audioCtxRef.current.close()
+      if (audioCtxRef.current && audioCtxRef.current.state !== 'closed') {
+        audioCtxRef.current.close().catch(() => {})
+      }
     }
   }, [stopAll, audioUrl])
 
@@ -180,14 +182,6 @@ export default function NarrationModal({ beliefs = [], session = {}, narrationTe
       analyserRef.current = audioCtxRef.current.createAnalyser()
       analyserRef.current.fftSize = 256
       audioDestRef.current = audioCtxRef.current.createMediaStreamDestination()
-      
-      // Connect TTS Audio to analyser
-      if (audioRef.current && !sourceRef.current) {
-        sourceRef.current = audioCtxRef.current.createMediaElementSource(audioRef.current)
-        sourceRef.current.connect(analyserRef.current)
-        analyserRef.current.connect(audioCtxRef.current.destination)
-        analyserRef.current.connect(audioDestRef.current)
-      }
 
       // Start generative ambient drone
       const droneOsc = audioCtxRef.current.createOscillator()
@@ -229,6 +223,15 @@ export default function NarrationModal({ beliefs = [], session = {}, narrationTe
             filter.frequency.setTargetAtTime(200, now, 1)
         }
     }
+
+    // Connect TTS Audio to analyser (needs to happen even if context exists but source was cleared)
+    if (audioCtxRef.current && audioRef.current && !sourceRef.current) {
+      sourceRef.current = audioCtxRef.current.createMediaElementSource(audioRef.current)
+      sourceRef.current.connect(analyserRef.current)
+      analyserRef.current.connect(audioCtxRef.current.destination)
+      analyserRef.current.connect(audioDestRef.current)
+    }
+
     if (audioCtxRef.current.state === 'suspended') {
       audioCtxRef.current.resume()
     }
@@ -320,7 +323,6 @@ export default function NarrationModal({ beliefs = [], session = {}, narrationTe
         }
 
         const audio = new Audio(url)
-        audio.crossOrigin = 'anonymous'
         audioRef.current = audio
       }
 
