@@ -168,16 +168,33 @@ async def update_config(
     return {"ok": True, "updated": updated, "config": live_config}
 
 
+class TokenRequest(BaseModel):
+    api_key: Optional[str] = None
+
+
 @app.post("/api/token")
-async def get_ephemeral_token():
-    """Generates an ephemeral token for the Gemini Live API."""
+async def get_ephemeral_token(req: TokenRequest = None):
+    """Generates an ephemeral token for the Gemini Live API.
+    Accepts an optional api_key in the request body — uses it instead of the server key.
+    """
     try:
+        # Use user-provided key if present, otherwise fall back to server key
+        api_key = (req.api_key if req and req.api_key else None) or GEMINI_API_KEY
+        if not api_key:
+            raise HTTPException(status_code=400, detail="No Gemini API key available")
+
+        # Create a per-request client with the correct key
+        request_client = genai.Client(
+            api_key=api_key,
+            http_options={"api_version": "v1alpha"},
+        )
+
         now = datetime.datetime.now(tz=datetime.timezone.utc)
         expire_time = now + datetime.timedelta(minutes=30)
-        
-        token = client.auth_tokens.create(
+
+        token = request_client.auth_tokens.create(
             config={
-                "uses": 10, # Allow some reconnection leeway
+                "uses": 10,
                 "expire_time": expire_time.isoformat(),
                 "new_session_expire_time": (now + datetime.timedelta(minutes=5)).isoformat(),
                 "http_options": {"api_version": "v1alpha"},
@@ -188,6 +205,8 @@ async def get_ephemeral_token():
             "token": token.name,
             "expires_at": expire_time.isoformat()
         }
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"Error generating ephemeral token: {e}")
         raise HTTPException(status_code=500, detail=str(e))

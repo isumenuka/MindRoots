@@ -26,15 +26,16 @@ function sanitizeText(text) {
 function sanitizeBeliefNode(node) {
   if (!node) return node
   
-  // Remove any explicitly undefined fields from the AI JSON
   const cleanNode = JSON.parse(JSON.stringify(node))
   
-  return {
-    ...cleanNode,
-    belief: sanitizeText(cleanNode.belief || ''),
-    origin_event: sanitizeText(cleanNode.origin_event || ''),
-    cost_today: sanitizeText(cleanNode.cost_today || ''),
+  // Sanitize all string fields dynamically to support multiple node types
+  for (const key in cleanNode) {
+    if (typeof cleanNode[key] === 'string') {
+      cleanNode[key] = sanitizeText(cleanNode[key])
+    }
   }
+  
+  return cleanNode
 }
 
 export { sanitizeText, sanitizeBeliefNode }

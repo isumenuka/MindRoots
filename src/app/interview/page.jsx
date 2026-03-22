@@ -3,7 +3,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useRouter } from 'next/navigation'
-import { auth, onAuthStateChanged, createSession, saveBelief, updateSessionStatus } from '@/services/FirebaseService'
+import { auth, onAuthStateChanged, createSession, saveBelief, updateSessionStatus, getUserDoc } from '@/services/FirebaseService'
 import GeminiLiveService from '@/services/GeminiLiveService'
 import useMicrophone from '@/hooks/useMicrophone'
 import useAudioPlayer from '@/hooks/useAudioPlayer'
@@ -11,12 +11,13 @@ import WaveformVisualizer from '@/components/WaveformVisualizer'
 import useAppStore from '@/store/useAppStore'
 import { sanitizeBeliefNode } from '@/utils/sanitize'
 import AppLogo from '@/components/AppLogo'
+import { getNodeDisplayInfo } from '@/utils/nodeTypes'
 
 const MAX_BELIEFS = 5
 
 export default function InterviewPage() {
   const router = useRouter()
-  const { setUser, setSessionId, addBelief, beliefs, addTranscriptEntry, appendLastTranscriptEntry, clearTranscript, transcript, setIsInterviewing } = useAppStore()
+  const { setUser, setSessionId, addBelief, resetBeliefs, beliefs, addTranscriptEntry, appendLastTranscriptEntry, clearTranscript, transcript, setIsInterviewing } = useAppStore()
 
   const [user, setLocalUser] = useState(null)
   const [sessionId, setLocalSessionId] = useState(null)
@@ -27,9 +28,11 @@ export default function InterviewPage() {
   const [textInput, setTextInput] = useState('')
   const [micError, setMicError] = useState(null)
   const [connectionError, setConnectionError] = useState(null) // null | 'session_failed' | 'timeout' | string
+  const [showGlow, setShowGlow] = useState(false)
   const [transcriptScrollRef] = useState(() => ({ current: null }))
   const connectionTimerRef = useRef(null)
   const textInputRef = useRef(null)
+  const prevBeliefCount = useRef(0)
 
   const liveServiceRef = useRef(null)
   const sessionCreatedRef = useRef(false)
@@ -61,6 +64,7 @@ export default function InterviewPage() {
       liveServiceRef.current = { endSession: () => {}, _sentinel: true }
 
       clearTranscript()
+      resetBeliefs()
 
       // Start 30s connection timeout
       connectionTimerRef.current = setTimeout(() => {
@@ -89,7 +93,24 @@ export default function InterviewPage() {
 
       // Initialize Gemini Live
       const svc = new GeminiLiveService()
-      svc.init() // API key managed server-side in backend/server.py
+
+      // Fetch user's Gemini API key from Firestore
+      let userGeminiKey = null
+      try {
+        const userDocData = await getUserDoc(user.uid)
+        userGeminiKey = userDocData?.gemini_api_key || null
+      } catch (e) {
+        console.error('[Interview] Failed to fetch user doc:', e)
+      }
+
+      if (!userGeminiKey) {
+        clearTimeout(connectionTimerRef.current)
+        liveServiceRef.current = null
+        setConnectionError('no_api_key')
+        return
+      }
+
+      svc.init(userGeminiKey) // pass key for token generation
 
       svc.onAudioChunk = (chunk) => {
         playChunk(chunk)
@@ -203,6 +224,17 @@ export default function InterviewPage() {
     }
   }, [showTextInput])
 
+  // Trigger glow animation when beliefs are added
+  useEffect(() => {
+    if (beliefs.length > prevBeliefCount.current) {
+      setShowGlow(true)
+      const timer = setTimeout(() => setShowGlow(false), 1500)
+      prevBeliefCount.current = beliefs.length
+      return () => clearTimeout(timer)
+    }
+    prevBeliefCount.current = beliefs.length
+  }, [beliefs.length])
+
   const handleSendText = () => {
     const msg = textInput.trim()
     if (!msg) return
@@ -262,8 +294,12 @@ export default function InterviewPage() {
 
         <div className="flex items-center gap-6">
           {/* Belief counter */}
-          <div className="flex items-center gap-2 px-4 py-2 bg-white/5 rounded-full border border-white/10">
-            <span className="material-symbols-outlined text-[#818CF8] text-[18px]">local_fire_department</span>
+          <div className={`flex items-center gap-2 px-4 py-2 bg-white/5 rounded-full border transition-all duration-500 ${
+            showGlow ? 'animate-belief-glow border-[#818CF8]/50' : 'border-white/10'
+          }`}>
+            <span className={`material-symbols-outlined text-[#818CF8] text-[18px] ${
+              showGlow ? 'animate-fire-pulse' : ''
+            }`}>local_fire_department</span>
             <span className="text-sm font-medium text-slate-300">
               <span className="hidden sm:inline">{beliefs.length} core beliefs excavated</span>
               <span className="inline sm:hidden">{beliefs.length}/{MAX_BELIEFS}</span>
@@ -282,24 +318,29 @@ export default function InterviewPage() {
       </header>
 
       {/* Floating Extracted Beliefs Ticker */}
-      <div className="fixed right-6 top-28 bottom-28 z-40 flex flex-col gap-4 w-72 md:w-80 pointer-events-none overflow-hidden p-2 justify-start">
+      <div className="fixed right-6 top-28 bottom-28 z-40 flex flex-col gap-2.5 w-auto items-end pointer-events-none overflow-hidden p-2 justify-start">
         <AnimatePresence>
-          {beliefs.map((b, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, x: 100, scale: 0.9 }}
-              animate={{ opacity: 1, x: 0, scale: 1 }}
-              transition={{ type: 'spring', damping: 20, stiffness: 150 }}
-              className="bg-white/10 backdrop-blur-xl border border-[#818CF8]/50 p-4 rounded-2xl shadow-[0_0_40px_-10px_rgba(129,140,248,0.4)] relative overflow-hidden"
-            >
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full animate-[shimmer_2s_infinite]" />
-              <div className="flex items-center gap-2 mb-2 relative z-10">
-                <span className="material-symbols-outlined text-[#818CF8] text-[16px] animate-pulse">local_fire_department</span>
-                <span className="text-[10px] text-[#818CF8] font-bold uppercase tracking-widest">Excavated Belief</span>
-              </div>
-              <p className="text-sm text-white font-medium leading-relaxed relative z-10">"{b.belief}"</p>
-            </motion.div>
-          ))}
+          {beliefs.map((b, i) => {
+            const info = getNodeDisplayInfo(b)
+            return (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, x: 50, scale: 0.95 }}
+                animate={{ opacity: 1, x: 0, scale: 1 }}
+                transition={{ type: 'spring', damping: 20, stiffness: 150 }}
+                style={{
+                  borderColor: `${info.color}66`, // 40% opacity
+                  boxShadow: `0 0 30px -5px ${info.color}33`, // 20% glow
+                  color: info.color
+                }}
+                className="bg-[#1A1A1F]/80 backdrop-blur-2xl border px-3.5 py-2 rounded-full flex items-center gap-2.5 relative overflow-hidden group shadow-2xl"
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+                <span className="material-symbols-outlined text-[16px] relative z-10" style={{ fontVariationSettings: "'FILL' 1" }}>{info.icon}</span>
+                <span className="text-[9px] font-bold uppercase tracking-[0.1em] whitespace-nowrap relative z-10">{info.title}</span>
+              </motion.div>
+            )
+          })}
         </AnimatePresence>
       </div>
 
@@ -484,31 +525,50 @@ export default function InterviewPage() {
       {connectionError && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-6">
           <div className="w-full max-w-sm bg-[#111118] border border-white/10 rounded-2xl p-8 text-center shadow-2xl">
-            <div className="w-14 h-14 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto mb-5">
-              <span className="material-symbols-outlined text-red-400 text-3xl">
-                {connectionError === 'timeout' ? 'timer_off' : 'wifi_off'}
+            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-5 ${
+              connectionError === 'no_api_key'
+                ? 'bg-amber-500/10 border border-amber-500/20'
+                : 'bg-red-500/10 border border-red-500/20'
+            }`}>
+              <span className={`material-symbols-outlined text-3xl ${
+                connectionError === 'no_api_key' ? 'text-amber-400' : 'text-red-400'
+              }`}>
+                {connectionError === 'no_api_key' ? 'key' : connectionError === 'timeout' ? 'timer_off' : 'wifi_off'}
               </span>
             </div>
             <h3 className="font-display text-xl font-bold text-white mb-2">
-              {connectionError === 'timeout' ? 'Connection timed out' :
+              {connectionError === 'no_api_key' ? 'Gemini API Key Required' :
+               connectionError === 'timeout' ? 'Connection timed out' :
                connectionError === 'session_failed' ? 'Couldn\'t start session' :
                'Connection lost'}
             </h3>
             <p className="text-slate-400 text-sm leading-relaxed mb-7">
-              {connectionError === 'timeout'
+              {connectionError === 'no_api_key'
+                ? 'You need to add your Gemini API key in Settings before starting an interview. It only takes a moment.'
+                : connectionError === 'timeout'
                 ? 'Could not connect to your guide within 30 seconds. Check your internet and try again.'
                 : connectionError === 'session_failed'
                 ? 'Failed to create your session. This could be a network issue — please try again.'
                 : `An error occurred: ${connectionError}`}
             </p>
             <div className="flex flex-col gap-3">
-              <button
-                onClick={handleRetryConnection}
-                className="w-full py-3 bg-[#818CF8] text-white font-bold text-sm rounded-xl hover:bg-[#818CF8]/90 transition-colors flex items-center justify-center gap-2 shadow-lg shadow-[#818CF8]/20"
-              >
-                <span className="material-symbols-outlined text-[18px]">refresh</span>
-                Retry Session
-              </button>
+              {connectionError === 'no_api_key' ? (
+                <Link
+                  href="/settings?tab=profile"
+                  className="w-full py-3 bg-[#818CF8] text-white font-bold text-sm rounded-xl hover:bg-[#818CF8]/90 transition-colors flex items-center justify-center gap-2 shadow-lg shadow-[#818CF8]/20"
+                >
+                  <span className="material-symbols-outlined text-[18px]">settings</span>
+                  Go to Settings → Add API Key
+                </Link>
+              ) : (
+                <button
+                  onClick={handleRetryConnection}
+                  className="w-full py-3 bg-[#818CF8] text-white font-bold text-sm rounded-xl hover:bg-[#818CF8]/90 transition-colors flex items-center justify-center gap-2 shadow-lg shadow-[#818CF8]/20"
+                >
+                  <span className="material-symbols-outlined text-[18px]">refresh</span>
+                  Retry Session
+                </button>
+              )}
               <Link
                 href="/history"
                 className="w-full py-3 bg-white/5 border border-white/10 text-slate-200 font-semibold text-sm rounded-xl hover:bg-white/10 transition-colors flex items-center justify-center gap-2"

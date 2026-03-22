@@ -17,13 +17,29 @@ export async function POST(request) {
     }
 
     const db = getAdminDb()
+    const apiKey = (() => {
+      // Try to get user's personal key first
+      const _try = async () => {
+        const userSnap = await db.doc(`users/${uid}`).get()
+        return userSnap.data()?.gemini_api_key || process.env.GEMINI_API_KEY
+      }
+      return _try()
+    })()
 
     // ── 1. Read raw beliefs from Firestore (Admin SDK — bypasses rules) ──────
-    const beliefsSnap = await db.collection(`users/${uid}/sessions/${sessionId}/beliefs`).get()
+    const [resolvedKey, beliefsSnap] = await Promise.all([
+      apiKey,
+      db.collection(`users/${uid}/sessions/${sessionId}/beliefs`).get()
+    ])
     let rawBeliefs = beliefsSnap.docs.map(doc => {
       const f = doc.data()
+      const nodeType = f.node_type || 'BELIEF_NODE'
+      const primaryText = f.belief || f.perceived_obstacle || f.persona_name || f.coping_behavior || f.value_name || f.strength_name || f.pattern_description || f.envisioned_scenario || f.trigger_description || f.specific_action || f.primary_emotion_shift || ''
+
       return {
-        belief: f.belief || '',
+        ...f,
+        node_type: nodeType,
+        belief: primaryText, // Ensure Gemini sees the core text at 'belief'
         origin_person: f.origin_person || '',
         origin_event: f.origin_event || '',
         origin_year: parseInt(f.origin_year) || 0,
@@ -39,6 +55,7 @@ export async function POST(request) {
     // Fallback if empty
     if (rawBeliefs.length === 0) {
       rawBeliefs = [{
+        node_type: 'BELIEF_NODE',
         belief: "I am only as valuable as my last achievement",
         origin_person: "Father",
         origin_event: "Childhood praise exclusively tied to academic performance",
@@ -51,7 +68,7 @@ export async function POST(request) {
     // ── 2. Gemini Flash — structure beliefs into Origin Tree ──────────────────
     let beliefTree
     try {
-      beliefTree = await structureBeliefs(rawBeliefs, process.env.GEMINI_API_KEY)
+      beliefTree = await structureBeliefs(rawBeliefs, resolvedKey)
       console.log('[structure-beliefs] Gemini structuring succeeded')
     } catch (err) {
       console.warn('[structure-beliefs] Gemini failed, using fallback:', err.message)
@@ -64,11 +81,11 @@ export async function POST(request) {
           overall_emotional_tone: 'reflective',
         },
         belief_nodes: rawBeliefs.map((b, i) => ({
-          id: `belief_${i + 1}`,
+          id: b.id || `node_${i + 1}`,
           ...b,
           illustration_prompt: `A moody, memory-like scene evoking "${b.belief}". Cinematic, painterly, no people.`,
-          written_analysis: `This belief — "${b.belief}" — originated with ${b.origin_person} during ${b.origin_event}. Today it costs: ${b.cost_today}.`,
-          narration_script: `You hold a core belief: ${b.belief}. It formed in ${b.origin_year} through your relationship with ${b.origin_person}.`,
+          written_analysis: `This insight — "${b.belief}" — originated with ${b.origin_person} during ${b.origin_event}. Today it costs: ${b.cost_today}.`,
+          narration_script: `You hold a core part of your story: ${b.belief}. It formed in ${b.origin_year} through your relationship with ${b.origin_person}.`,
         })),
       }
     }

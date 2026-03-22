@@ -1,5 +1,7 @@
 'use client'
 
+import { getNodeDisplayInfo } from '@/utils/nodeTypes'
+
 const WEIGHT_CONFIG = {
   profound: { color: '#f87171', bg: 'rgba(248,113,113,0.06)', border: 'rgba(248,113,113,0.25)', label: 'Profound Weight' },
   high:     { color: '#fb923c', bg: 'rgba(251,146,60,0.06)',  border: 'rgba(251,146,60,0.25)',  label: 'High Weight' },
@@ -18,7 +20,7 @@ export default function CostImpactPanel({ beliefs = [], session = {} }) {
         <div className="flex items-center gap-2.5 px-4 py-1.5 rounded-full border border-red-500/20 bg-red-500/5">
           <div className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
           <span className="text-xs font-black text-red-400 uppercase tracking-[0.2em]">
-            The Cost of These Beliefs
+            The Cost & Impact of These Insights
           </span>
         </div>
         <div className="h-px flex-1 bg-gradient-to-r from-transparent via-red-500/30 to-transparent" />
@@ -28,6 +30,7 @@ export default function CostImpactPanel({ beliefs = [], session = {} }) {
       <div className="space-y-3 mb-8">
         {beliefs.map((belief, i) => {
           const cfg = WEIGHT_CONFIG[belief.emotional_weight] || WEIGHT_CONFIG.medium
+          const info = getNodeDisplayInfo(belief)
           return (
             <div
               key={i}
@@ -49,21 +52,21 @@ export default function CostImpactPanel({ beliefs = [], session = {} }) {
               {/* Belief → cost */}
               <div className="relative flex-1 min-w-0">
                 <p className="text-slate-300 text-base font-semibold mb-1 leading-snug">
-                  "{belief.belief}"
+                  "{info.primaryText}"
                 </p>
                 <div className="flex items-start gap-2 mt-2">
                   <span className="text-xs font-black uppercase tracking-widest mt-0.5"
                     style={{ color: cfg.color }}>{cfg.label}</span>
                   <span className="text-slate-600 text-xs mt-0.5">→</span>
-                  <span className="text-slate-400 text-sm italic leading-snug">{belief.cost_today}</span>
+                  <span className="text-slate-400 text-sm italic leading-snug">{info.tooltip1Val || info.tooltip2Val || info.tooltip1Title || 'Impact recorded'}</span>
                 </div>
               </div>
 
               {/* Origin tag */}
               <div className="relative flex-shrink-0 text-right">
-                <p className="text-xs text-slate-500 uppercase tracking-wider">{belief.origin_year || ''}</p>
+                <p className="text-xs text-slate-500 uppercase tracking-wider">{info.title}</p>
                 <p className="text-sm font-bold mt-0.5" style={{ color: cfg.color }}>
-                  {belief.origin_person || ''}
+                  {info.subtitle || 'Present'}
                 </p>
               </div>
             </div>

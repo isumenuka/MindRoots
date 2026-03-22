@@ -14,51 +14,148 @@ const WEIGHT_COLORS = {
   low:      '#4ade80',
 }
 
+const getNodeDisplayInfo = (node) => {
+  const type = node.node_type || 'BELIEF_NODE'
+  switch (type) {
+    case 'BELIEF_NODE': 
+      return { 
+        title: 'Core Belief', color: '#818CF8', 
+        subtitle: `${node.origin_year || ''}${node.origin_year && node.origin_person ? ' • ' : ''}${node.origin_person || ''}`,
+        text: node.belief, 
+        tooltip1Title: 'THE CORE COST', tooltip1Val: node.cost_today,
+        tooltip2Title: 'MODERN TRIGGER', tooltip2Val: node.trigger_event
+      };
+    case 'BLOCKER_NODE': 
+      return { 
+        title: 'Goal Blocker', color: '#F87171', subtitle: 'Current Obstacle',
+        text: node.target_goal, 
+        tooltip1Title: 'PERCEIVED OBSTACLE', tooltip1Val: node.perceived_obstacle
+      };
+    case 'CRITIC_PERSONA_NODE': 
+      return { 
+        title: 'Inner Critic', color: '#FBBF24', subtitle: `"${node.persona_name}"`,
+        text: node.common_catchphrases, 
+        tooltip1Title: 'PRIMARY UNDERLYING FEAR', tooltip1Val: node.primary_underlying_fear
+      };
+    case 'COPING_STRATEGY_NODE': 
+      return { 
+        title: 'Coping Strategy', color: '#34D399', subtitle: `Health Rating: ${node.healthiness_rating || '?'}`,
+        text: node.coping_behavior, 
+        tooltip1Title: 'TRIGGER SITUATION', tooltip1Val: node.trigger_situation
+      };
+    case 'VALUE_NODE': 
+      return { 
+        title: 'Core Value', color: '#60A5FA', subtitle: `Importance: ${node.importance_level || '?'}`,
+        text: node.value_name, 
+        tooltip1Title: 'CURRENT ALIGNMENT', tooltip1Val: node.current_alignment_status
+      };
+    case 'STRENGTH_NODE': 
+      return { 
+        title: 'Strength Marker', color: '#A78BFA', subtitle: 'Inherent Strength',
+        text: node.strength_name, 
+        tooltip1Title: 'DEMONSTRATED SCENARIO', tooltip1Val: node.demonstrated_scenario,
+        tooltip2Title: 'RELATED BELIEF OVERCOME', tooltip2Val: node.related_belief_overcome
+      };
+    case 'RELATIONSHIP_PATTERN_NODE': 
+      return { 
+        title: 'Relational Pattern', color: '#F472B6', subtitle: 'Interpersonal Dynamics',
+        text: node.pattern_description, 
+        tooltip1Title: 'TYPICAL ROLE PLAYED', tooltip1Val: node.typical_role_played
+      };
+    case 'FUTURE_VISION_NODE': 
+      return { 
+        title: 'Future Vision', color: '#2DD4BF', subtitle: 'Ideal Self',
+        text: node.envisioned_scenario, 
+        tooltip1Title: 'CHANGED BEHAVIOR', tooltip1Val: node.changed_behavior,
+        tooltip2Title: 'NEW FEELING', tooltip2Val: node.new_feeling
+      };
+    case 'TRIGGER_NODE': 
+      return { 
+        title: 'Emotional Trigger', color: '#FB923C', subtitle: `Intensity: ${node.reaction_intensity || '?'}`,
+        text: node.trigger_description, 
+        tooltip1Title: 'PHYSICAL RESPONSE', tooltip1Val: node.physical_response
+      };
+    case 'ACTION_STEP_NODE': 
+      return { 
+        title: 'Action Step', color: '#A3E635', subtitle: `Deadline: ${node.target_deadline || '?'}`,
+        text: node.specific_action, 
+        tooltip1Title: 'CONFIDENCE LEVEL', tooltip1Val: `${node.user_confidence_level || '?'}/10`
+      };
+    case 'SESSION_METRIC_NODE': 
+      return { 
+        title: 'Session Metric', color: '#9CA3AF', subtitle: `Shift: ${node.primary_emotion_shift || '?'}`,
+        text: `From ${node.starting_energy_level} to ${node.ending_energy_level}`, 
+      };
+    default: 
+      return { 
+        title: 'New Insight', color: '#818CF8', subtitle: '',
+        text: node.belief || JSON.stringify(node), 
+      };
+  }
+}
+
 // ── Custom React Flow Nodes ──────────────────────────────────────────────
 const BeliefNode = ({ data, selected }) => {
-  const { belief, index, color } = data
+  const { belief: nodeData, index } = data
+  const info = getNodeDisplayInfo(nodeData)
+  const isServing = nodeData.still_serving === false ? false : (nodeData.still_serving === true ? true : null)
+  const nodeColor = info.color
+
   return (
-    <div className={`relative w-[260px] rounded-2xl bg-[#0d1117] transition-all shadow-xl group border-2 ${selected ? 'shadow-[0_0_20px_rgba(255,255,255,0.2)]' : ''}`} style={{ borderColor: selected ? color : `${color}66` }}>
-      <Handle type="target" position={Position.Top} style={{ background: color, width: 8, height: 8 }} />
-      <Handle type="source" position={Position.Bottom} style={{ background: color, width: 8, height: 8 }} />
+    <div className={`relative w-[260px] rounded-2xl bg-[#0d1117] transition-all shadow-xl group border-2 ${selected ? 'shadow-[0_0_20px_rgba(255,255,255,0.2)]' : ''}`} style={{ borderColor: selected ? nodeColor : `${nodeColor}66` }}>
+      <Handle type="target" position={Position.Top} style={{ background: nodeColor, width: 8, height: 8 }} />
+      <Handle type="source" position={Position.Bottom} style={{ background: nodeColor, width: 8, height: 8 }} />
       
       {/* Corner accent triangle */}
       <div className="absolute top-0 left-0 w-10 h-10 pointer-events-none overflow-hidden rounded-tl-xl">
-        <div className="absolute -top-5 -left-5 w-14 h-14 rotate-45" style={{ backgroundColor: color, opacity: 0.15 }}></div>
+        <div className="absolute -top-5 -left-5 w-14 h-14 rotate-45" style={{ backgroundColor: nodeColor, opacity: 0.15 }}></div>
       </div>
       
       <div className="p-4">
         <div className="flex items-center justify-between mb-3">
            <div className="flex items-center gap-3">
-             <div className="flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold" style={{ backgroundColor: `${color}20`, color: color, border: `1px solid ${color}` }}>
+             <div className="flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold" style={{ backgroundColor: `${nodeColor}20`, color: nodeColor, border: `1px solid ${nodeColor}` }}>
                {index + 1}
              </div>
-             <div className="text-[10px] uppercase font-bold tracking-wider" style={{ color: `${color}BB` }}>
-               {belief.origin_year}{belief.origin_year && belief.origin_person ? ' • ' : ''}{belief.origin_person}
+             <div className="flex flex-col">
+               <div className="text-[10px] uppercase font-bold tracking-wider" style={{ color: `${nodeColor}BB` }}>
+                 {info.title}
+               </div>
+               {info.subtitle && (
+                 <div className="text-[9px] uppercase tracking-wider text-slate-400">
+                   {info.subtitle}
+                 </div>
+               )}
              </div>
            </div>
-           {belief.still_serving === false ? (
+           {isServing === false ? (
               <div className="w-2.5 h-2.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]" title="Processed/No longer serving" />
-           ) : (
+           ) : isServing === true ? (
               <div className="w-2.5 h-2.5 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]" title="Still active/serving" />
-           )}
+           ) : null}
         </div>
         <div className="text-[13px] font-medium text-slate-200 line-clamp-3 leading-relaxed font-body">
-          &ldquo;{belief.belief}&rdquo;
+          &ldquo;{info.text}&rdquo;
         </div>
       </div>
       
-      {/* Tooltip on hover (done via group-hover inside the flow) */}
-      <div className="absolute top-full left-0 mt-4 w-[280px] bg-[#070a12] border border-white/10 rounded-xl p-4 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-2xl">
-          <div className="text-[10px] font-black tracking-widest text-red-400 mb-1.5">THE CORE COST</div>
-          <div className="text-xs text-slate-300 italic mb-3 leading-snug">{belief.cost_today}</div>
-          {belief.trigger_event && (
-             <>
-                <div className="text-[10px] font-black tracking-widest text-[#818CF8] mb-1.5 mt-2">MODERN TRIGGER</div>
-                <div className="text-xs text-slate-400 leading-snug">{belief.trigger_event}</div>
-             </>
-          )}
-      </div>
+      {/* Tooltip on hover */}
+      {(info.tooltip1Val || info.tooltip2Val) && (
+        <div className="absolute top-full left-0 mt-4 w-[280px] bg-[#070a12] border border-white/10 rounded-xl p-4 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-2xl">
+            {info.tooltip1Val && (
+              <>
+                <div className="text-[10px] font-black tracking-widest mb-1.5" style={{ color: nodeColor }}>{info.tooltip1Title}</div>
+                <div className="text-xs text-slate-300 italic mb-3 leading-snug">{info.tooltip1Val}</div>
+              </>
+            )}
+            {info.tooltip2Val && (
+               <>
+                  <div className="text-[10px] font-black tracking-widest mb-1.5 mt-2" style={{ color: nodeColor }}>{info.tooltip2Title}</div>
+                  <div className="text-xs text-slate-400 leading-snug">{info.tooltip2Val}</div>
+               </>
+            )}
+        </div>
+      )}
     </div>
   )
 }
@@ -137,7 +234,8 @@ export default function BeliefTreeMap({ beliefs = [], session = {} }) {
 
     beliefs.forEach((belief, i) => {
        const parent = belief.parent_id || 'root'
-       const color = WEIGHT_COLORS[belief.emotional_weight] || '#818CF8'
+       const infoColor = getNodeDisplayInfo(belief).color
+       const color = WEIGHT_COLORS[belief.emotional_weight] || infoColor || '#818CF8'
        
        initialEdges.push({
          id: `e-${parent}-${belief.id}`,

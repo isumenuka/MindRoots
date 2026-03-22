@@ -176,13 +176,18 @@ async function updateUserVoice(uid, voice) {
   await updateDoc(userRef, { preferred_voice: voice })
 }
 
+async function updateUserGeminiKey(uid, key) {
+  const userRef = doc(db, 'users', uid)
+  await updateDoc(userRef, { gemini_api_key: key })
+}
+
 export {
   auth, db, app,
   signInWithGoogle, signOut,
   createSession, updateSessionStatus, saveBelief, updateBelief,
   saveBeliefTree, getBeliefTree, getBeliefs, getSessions, getSession,
   generateShareToken, getShareData, deleteAllUserData, deleteSession,
-  markOnboardingComplete, getUserDoc, updateUserVoice,
+  markOnboardingComplete, getUserDoc, updateUserVoice, updateUserGeminiKey,
   onAuthStateChanged,
   onSnapshot, doc, collection,
 }

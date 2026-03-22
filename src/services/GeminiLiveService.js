@@ -24,10 +24,13 @@ class GeminiLiveService {
     this.onTurnComplete = null    // cb()
     this._outputTranscriptBuffer = '' // accumulate streaming agent words
     this._inputTranscriptBuffer  = '' // accumulate streaming user words
+    this._transcriptBubbleStarted = false // tracks if agent bubble has been created this turn
   }
 
-  // Kept for API compatibility, not used
-  init(_apiKey) {}
+  // Store the user's API key to forward to the backend for token generation
+  init(apiKey) {
+    this._apiKey = apiKey || null
+  }
 
   async startSession() {
     return new Promise(async (resolve, reject) => {
@@ -36,8 +39,12 @@ class GeminiLiveService {
         const configRes = await fetch(`${BACKEND_URL}/api/config`)
         const config = await configRes.json()
 
-        // 2. Fetch Ephemeral Token
-        const tokenRes = await fetch(`${BACKEND_URL}/api/token`, { method: "POST" })
+        // 2. Fetch Ephemeral Token — forward user's API key to backend
+        const tokenRes = await fetch(`${BACKEND_URL}/api/token`, {
+          method: "POST",
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ api_key: this._apiKey }),
+        })
         if (!tokenRes.ok) throw new Error("Failed to get ephemeral token")
         const tokenData = await tokenRes.json()
         const token = tokenData.token
@@ -79,10 +86,11 @@ class GeminiLiveService {
               console.log('[GeminiLive] Turn complete')
               // Flush the buffered output transcript as one complete message
               if (this._outputTranscriptBuffer) {
-                const text = this._outputTranscriptBuffer.trim()
+                const rawText = this._outputTranscriptBuffer.trim()
                 this._outputTranscriptBuffer = ''
-                this.fullTranscript.push({ role: 'assistant', text })
-                this._parseBeliefNodes(text)
+                this._transcriptBubbleStarted = false
+                this.fullTranscript.push({ role: 'assistant', text: rawText })
+                this._parseBeliefNodes(rawText)
               }
               this.onTurnComplete?.()
             }
@@ -118,16 +126,20 @@ class GeminiLiveService {
             // Parse output transcript — buffer chunks, emit one bubble per turn
             if (serverContent.outputTranscription?.text) {
               const chunk = serverContent.outputTranscription.text
-              if (!this._outputTranscriptBuffer) {
-                // First chunk: create an empty bubble then stream into it
-                this._outputTranscriptBuffer = chunk
-                const displayText = this._stripBeliefNodes(chunk)
-                if (displayText) this.onTranscript?.({ role: 'assistant', text: displayText })
-              } else {
-                // Subsequent chunks: append to existing bubble
-                this._outputTranscriptBuffer += chunk
-                const displayChunk = this._stripBeliefNodes(chunk)
-                if (displayChunk) this.onTranscriptChunk?.(displayChunk)
+              const prevClean = this._stripBeliefNodes(this._outputTranscriptBuffer)
+              this._outputTranscriptBuffer += chunk
+              const nextClean = this._stripBeliefNodes(this._outputTranscriptBuffer)
+              const newVisibleText = nextClean.slice(prevClean.length)
+
+              if (!this._transcriptBubbleStarted) {
+                // First visible text: create the bubble
+                if (newVisibleText) {
+                  this._transcriptBubbleStarted = true
+                  this.onTranscript?.({ role: 'assistant', text: newVisibleText })
+                }
+              } else if (newVisibleText) {
+                // Subsequent visible text: append to existing bubble
+                this.onTranscriptChunk?.(newVisibleText)
               }
             }
           } else if (msg.setupComplete) {
@@ -211,28 +223,58 @@ class GeminiLiveService {
     return setup
   }
 
-  // Strip BELIEF_NODE: {...} blocks from text shown in the chat UI.
-  // The raw buffer is kept intact for _parseBeliefNodes to process.
-  // NOTE: Do NOT call .trim() here — each chunk is a single streamed word/space,
-  //       trimming would eat the spaces between words and jam them together.
+  // Strip Node blocks from text shown in the chat UI.
+  // Handles both:
+  //   <insight_node> {...} </insight_node>  (XML tag format, current)
+  //   NODE_TYPE: {...}                      (legacy colon format)
+  //   json {...}                            (raw json format)
+  //   ```json {...} ```                     (markdown format)
   _stripBeliefNodes(text) {
     return text
-      .replace(/BELIEF_NODE:\s*\{[\s\S]*?\}/g, '')
+      // XML tag format: <insight_node> ... </insight_node>  (possibly spanning chunks)
+      .replace(/<insight_node>\s*[\s\S]*?<\/insight_node>/gi, '')
+      // Partial open tag that hasn't closed yet — hide everything from the opening tag onward
+      .replace(/<insight_node>[\s\S]*/gi, '')
+      // Markdown JSON format
+      .replace(/```(?:json)?\s*[\s\S]*?```/gi, '')
+      // Partial markdown format
+      .replace(/```(?:json)?[\s\S]*/gi, '')
+      // Raw 'json {' format
+      .replace(/json\s*\{[\s\S]*?\}/gi, '')
+      // Partial raw 'json {' format
+      .replace(/json\s*\{[\s\S]*/gi, '')
+      // Legacy colon format: BELIEF_NODE: {...}
+      .replace(/(BELIEF|BLOCKER|CRITIC_PERSONA|COPING_STRATEGY|VALUE|STRENGTH|RELATIONSHIP_PATTERN|FUTURE_VISION|TRIGGER|ACTION_STEP|SESSION_METRIC)_NODE:\s*\{[\s\S]*?\}/g, '')
       .replace(/`/g, '')
       .replace(/\n{3,}/g, '\n\n')
   }
 
-  // Parse out Socratic Belief Nodes from raw AI output manually!
+  // Parse out Socratic Nodes from raw AI output manually!
   _parseBeliefNodes(text) {
-    const regex = /BELIEF_NODE:\s*(\{[\s\S]*?\})/g
-    let match
-    while ((match = regex.exec(text)) !== null) {
-      try {
-        const node = JSON.parse(match[1])
-        this.beliefNodes.push(node)
-        this.onBeliefFound?.(node)
-      } catch (e) {
-        // invalid JSON node
+    const regexes = [
+      /(BELIEF|BLOCKER|CRITIC_PERSONA|COPING_STRATEGY|VALUE|STRENGTH|RELATIONSHIP_PATTERN|FUTURE_VISION|TRIGGER|ACTION_STEP|SESSION_METRIC)_NODE:\s*(\{[\s\S]*?\})/g,
+      /<insight_node>\s*(\{[\s\S]*?\})\s*<\/insight_node>/gi,
+      /```(?:json)?\s*(\{[\s\S]*?\})\s*```/gi,
+      /json\s*(\{[\s\S]*?\})/gi
+    ]
+    
+    for (const regex of regexes) {
+      let match
+      while ((match = regex.exec(text)) !== null) {
+        try {
+          const jsonStr = match[2] || match[1]
+          const node = JSON.parse(jsonStr)
+          
+          if (node.id) { // Sanity check to avoid parsing random json
+            if (!node.node_type) {
+              node.node_type = match[2] ? match[1] + "_NODE" : "BELIEF_NODE"
+            }
+            this.beliefNodes.push(node)
+            this.onBeliefFound?.(node)
+          }
+        } catch (e) {
+          // invalid JSON node
+        }
       }
     }
     

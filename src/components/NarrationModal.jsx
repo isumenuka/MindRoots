@@ -36,6 +36,8 @@ const WEIGHT_COLORS = {
   profound: '#f87171', high: '#fb923c', medium: '#facc15', low: '#4ade80',
 }
 
+import { getNodeDisplayInfo } from '@/utils/nodeTypes'
+
 export default function NarrationModal({ beliefs = [], session = {}, narrationText = '', onClose }) {
   const [currentIdx, setCurrentIdx] = useState(-1) // -1 = intro
   const [isPlaying, setIsPlaying] = useState(false)
@@ -50,15 +52,17 @@ export default function NarrationModal({ beliefs = [], session = {}, narrationTe
   const fullScript = narrationText ||
     [
       `This is the archaeology of your mind. What you are about to hear is the map of beliefs that have silently shaped every decision you have made.`,
-      ...beliefs.map((b, i) =>
-        `Belief ${i + 1}. Formed in ${b.origin_year || 'the past'}, through ${b.origin_person || 'someone close'}: "${b.belief}". ${b.cost_today ? `Today, this costs you: ${b.cost_today}.` : ''} ${b.still_serving === false ? 'This belief no longer serves you.' : ''}`
-      ),
+      ...beliefs.map((b, i) => {
+        const info = getNodeDisplayInfo(b)
+        return `Insight ${i + 1}. ${info.title}. ${info.subtitle ? `Context: ${info.subtitle.replace(' • ', ' and ')}.` : ''} "${info.primaryText}". ${info.tooltip1Val ? `Impact: ${info.tooltip1Val}.` : ''}`
+      }),
       `You now hold the map. The path forward is yours to walk.`
     ].join(' ')
 
-  const beliefScripts = beliefs.map(b =>
-    `"${b.belief}" — formed in ${b.origin_year || '?'} through ${b.origin_person || 'unknown'}.`
-  )
+  const beliefScripts = beliefs.map(b => {
+    const info = getNodeDisplayInfo(b)
+    return `"${info.primaryText}" — ${info.subtitle || info.title}.`
+  })
 
   const stopAll = useCallback(() => {
     window.speechSynthesis?.cancel()
@@ -191,13 +195,13 @@ export default function NarrationModal({ beliefs = [], session = {}, narrationTe
                     </div>
                     <div className="flex-1">
                       <p className="text-[9px] uppercase tracking-widest mb-1.5" style={{ color }}>
-                        {b.origin_year} · {b.origin_person}
+                        {getNodeDisplayInfo(b).subtitle || getNodeDisplayInfo(b).title}
                       </p>
                       <p className="text-slate-200 font-semibold text-sm leading-snug mb-2">
-                        "{b.belief}"
+                        "{getNodeDisplayInfo(b).primaryText}"
                       </p>
-                      {b.cost_today && (
-                        <p className="text-slate-500 text-xs italic">{b.cost_today}</p>
+                      {getNodeDisplayInfo(b).tooltip1Val && (
+                        <p className="text-slate-500 text-xs italic">{getNodeDisplayInfo(b).tooltip1Title}: {getNodeDisplayInfo(b).tooltip1Val}</p>
                       )}
                     </div>
                     {active && (

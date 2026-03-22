@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { auth, onAuthStateChanged, signOut, deleteAllUserData, getUserDoc, updateUserVoice } from '@/services/FirebaseService'
+import { auth, onAuthStateChanged, signOut, deleteAllUserData, getUserDoc, updateUserVoice, updateUserGeminiKey } from '@/services/FirebaseService'
 import useAppStore from '@/store/useAppStore'
 import AppSidebar from '@/components/AppSidebar'
 
@@ -30,6 +30,11 @@ function SettingsInner() {
   const [selectedVoice, setSelectedVoice] = useState('Puck')
   const [savingVoice,   setSavingVoice]   = useState(false)
   const [voiceSaved,    setVoiceSaved]    = useState(false)
+  const [geminiKey,     setGeminiKey]     = useState('')
+  const [showKey,       setShowKey]       = useState(false)
+  const [savingKey,     setSavingKey]     = useState(false)
+  const [keySaved,      setKeySaved]      = useState(false)
+  const [hasKey,        setHasKey]        = useState(false)
 
   useEffect(() => {
     const tab = searchParams.get('tab')
@@ -44,6 +49,7 @@ function SettingsInner() {
         const doc = await getUserDoc(u.uid)
         setUserDoc(doc)
         if (doc?.preferred_voice) setSelectedVoice(doc.preferred_voice)
+        if (doc?.gemini_api_key)  setHasKey(true)
       } catch {}
     })
     return () => unsub()
@@ -86,6 +92,21 @@ function SettingsInner() {
       console.error(e)
     }
     setSavingVoice(false)
+  }
+
+  const handleSaveGeminiKey = async () => {
+    if (!user || !geminiKey.trim()) return
+    setSavingKey(true)
+    try {
+      await updateUserGeminiKey(user.uid, geminiKey.trim())
+      setHasKey(true)
+      setGeminiKey('')
+      setKeySaved(true)
+      setTimeout(() => setKeySaved(false), 3000)
+    } catch (e) {
+      console.error(e)
+    }
+    setSavingKey(false)
   }
 
   if (!user) return null
@@ -161,6 +182,73 @@ function SettingsInner() {
                     {userDoc?.created_at?.toDate?.()?.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) || '—'}
                   </div>
                 </div>
+              </div>
+
+
+              {/* ── Gemini API Key ── */}
+              <div className="pt-2">
+                <div className="flex items-center gap-3 mb-2">
+                  <span className="material-symbols-outlined text-[#818CF8] text-[20px]">key</span>
+                  <h2 className="font-display text-lg font-bold text-white">Gemini API Key</h2>
+                  {hasKey && (
+                    <span className="ml-auto text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400">
+                      ✓ Key saved
+                    </span>
+                  )}
+                </div>
+                <p className="text-slate-500 text-sm mb-4 leading-relaxed">
+                  MindRoots uses your personal Gemini API key to power the AI interview. You must add your key before starting a session.{' '}
+                  <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" className="text-[#818CF8] hover:underline">
+                    Get a free key at Google AI Studio ↗
+                  </a>
+                </p>
+
+                {!hasKey && (
+                  <div className="flex items-center gap-2 px-4 py-3 mb-4 bg-amber-500/10 border border-amber-500/30 rounded-xl text-amber-400 text-sm font-medium">
+                    <span className="material-symbols-outlined text-[18px]">warning</span>
+                    No API key set — you won't be able to start an interview until you add one.
+                  </div>
+                )}
+
+                <div className="flex gap-2 items-center">
+                  <div className="relative flex-1">
+                    <input
+                      type={showKey ? 'text' : 'password'}
+                      value={geminiKey}
+                      onChange={e => setGeminiKey(e.target.value)}
+                      placeholder={hasKey ? '••••••••  (enter new key to replace)' : 'AIza…'}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#818CF8]/60 focus:bg-white/[0.07] transition-all pr-12 font-mono"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowKey(v => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-[20px]">{showKey ? 'visibility_off' : 'visibility'}</span>
+                    </button>
+                  </div>
+                  <button
+                    onClick={handleSaveGeminiKey}
+                    disabled={savingKey || !geminiKey.trim()}
+                    className="flex items-center gap-2 px-5 py-3 bg-[#818CF8] text-white font-bold text-sm rounded-xl hover:bg-[#818CF8]/90 transition-colors disabled:opacity-40 shadow-lg shadow-[#818CF8]/20 whitespace-nowrap"
+                  >
+                    {savingKey
+                      ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Saving…</>
+                      : <><span className="material-symbols-outlined text-[18px]">save</span>Save Key</>
+                    }
+                  </button>
+                </div>
+
+                {keySaved && (
+                  <div className="flex items-center gap-1.5 mt-3 text-emerald-400 text-sm font-semibold animate-in fade-in duration-200">
+                    <span className="material-symbols-outlined text-[18px]">check_circle</span>
+                    API key saved securely!
+                  </div>
+                )}
+
+                <p className="mt-3 text-xs text-slate-600 leading-relaxed">
+                  Your key is stored in your private Firestore account — never shared or logged.
+                </p>
               </div>
 
               {/* ── Voice Preferences ── */}

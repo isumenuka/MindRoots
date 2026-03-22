@@ -1,15 +1,12 @@
 'use client'
 
+import { getNodeDisplayInfo, WEIGHT_COLORS } from '@/utils/nodeTypes'
+
 export default function BeliefCard({ node, index }) {
   if (!node) return null
 
-  const emotionColors = {
-    low: '#4ade80',
-    medium: '#facc15',
-    high: '#fb923c',
-    profound: '#f87171',
-  }
-  const weightColor = emotionColors[node.emotional_weight] || '#818CF8'
+  const info = getNodeDisplayInfo(node)
+  const weightColor = WEIGHT_COLORS[node.emotional_weight] || info.color || '#818CF8'
 
   return (
     <div className="relative flex flex-col lg:flex-row gap-6 bg-card border border-white/5 rounded-xl overflow-hidden group hover:border-accent/30 transition-all duration-500 shadow-xl shadow-black/20">
@@ -19,7 +16,7 @@ export default function BeliefCard({ node, index }) {
         {node.illustration_url ? (
           <img
             src={node.illustration_url}
-            alt={`Origin of: ${node.belief}`}
+            alt={`${info.title}: ${info.primaryText}`}
             className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
           />
         ) : (
@@ -44,14 +41,14 @@ export default function BeliefCard({ node, index }) {
               style={{ backgroundColor: weightColor }}
             />
             <span className="text-sm font-bold text-accent uppercase tracking-widest">
-              Origin: {node.origin_year} {node.age_at_origin ? `(Age ${node.age_at_origin})` : ''} · {node.origin_person}
+              {info.title} {info.subtitle ? `· ${info.subtitle}` : ''} {node.age_at_origin ? `(Age ${node.age_at_origin})` : ''}
             </span>
           </div>
         </div>
 
         {/* Belief statement */}
         <h3 className="text-3xl font-display font-semibold text-slate-100 mb-2 leading-tight relative z-10">
-          "{node.belief}"
+          "{info.primaryText}"
         </h3>
 
         {/* Body & Trigger Info Row */}
@@ -88,10 +85,12 @@ export default function BeliefCard({ node, index }) {
         )}
 
         {/* Cost Today */}
+        {(info.tooltip1Val || node.cost_today) && (
         <div className="bg-surface rounded-lg p-4 border-l-2 border-accent/50 relative z-10 group-hover:border-accent transition-colors duration-300">
-          <p className="text-sm font-bold text-accent uppercase tracking-widest mb-1">Cost Today</p>
-          <p className="text-slate-300 text-base italic">{node.cost_today}</p>
+          <p className="text-sm font-bold text-accent uppercase tracking-widest mb-1">{info.tooltip1Title || 'Impact'}</p>
+          <p className="text-slate-300 text-base italic">{info.tooltip1Val || node.cost_today}</p>
         </div>
+        )}
 
         {/* Reframing Mantra */}
         {node.reframing_mantra && (

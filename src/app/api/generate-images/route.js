@@ -17,7 +17,9 @@ export async function POST(request) {
     }
 
     const db = getAdminDb()
-    const apiKey = process.env.GEMINI_API_KEY
+    // Resolve API key: user's personal key first, then server fallback
+    const userSnap = await db.doc(`users/${uid}`).get()
+    const apiKey = userSnap.data()?.gemini_api_key || process.env.GEMINI_API_KEY
     const nodes = beliefTree.belief_nodes || []
 
     // Read existing belief docs so we can match and update them

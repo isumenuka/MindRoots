@@ -6,24 +6,25 @@ import { GoogleGenAI } from '@google/genai'
 
 const FLASH_MODEL = 'gemini-2.5-flash'
 
-const STRUCTURER_SYSTEM_PROMPT = `You are the Data Structurer. You receive raw belief node data extracted from a voice interview and produce a complete, validated Belief Origin Tree JSON graph.
+const STRUCTURER_SYSTEM_PROMPT = `You are the Data Structurer. You receive raw insight nodes extracted from a voice interview (which can be beliefs, personas, coping strategies, values, etc.) and produce a complete, validated Insight Origin JSON graph.
 
-For each belief node provided, enrich and structure it. Then produce a synthesized meta-analysis of all beliefs together.
+For each node provided, enrich and structure it. Then produce a synthesized meta-analysis of all insights together.
 
 Respond ONLY with valid JSON in this exact format — no markdown code fences, no extra text:
 {
   "session_summary": {
     "total_beliefs_found": number,
     "oldest_belief_year": number,
-    "dominant_theme": "string — one sentence describing the thread across all beliefs",
-    "estimated_total_cost": "string — what all beliefs combined are costing the user",
+    "dominant_theme": "string — one sentence describing the thread across all insights",
+    "estimated_total_cost": "string — what all insights combined are costing the user",
     "overall_emotional_tone": "wounded | guarded | striving | liberated | conflicted"
   },
   "belief_nodes": [
     {
-      "id": "belief_1",
-      "parent_id": "string | null — id of a belief that birthed this one, if any",
-      "belief": "string — the core limiting belief statement, written in first person",
+      "id": "node_1",
+      "node_type": "string — the type of node, e.g. BELIEF_NODE, CRITIC_PERSONA_NODE",
+      "parent_id": "string | null — id of a node that birthed this one, if any",
+      "belief": "string — the core statement, limit, persona, or pattern. This is the primary text of the insight, written in first person if applicable.",
       "origin_person": "string",
       "origin_event": "string",
       "origin_year": number,
@@ -32,14 +33,14 @@ Respond ONLY with valid JSON in this exact format — no markdown code fences, n
       "emotional_weight": "low | medium | high | profound",
       "cost_today": "string",
       "illustration_prompt": "string — a detailed visual scene description for image generation. Describe the scene of the origin moment: setting, lighting, atmosphere, objects. Painterly, evocative, memory-like aesthetic. NO people or faces.",
-      "written_analysis": "string — 3-4 sentences: what this belief is, where it came from, how it is limiting the user today, and one reframe question for them to consider",
+      "written_analysis": "string — 3-4 sentences: what this insight is, where it came from, how it affects the user today, and one reframe question for them to consider",
       "narration_script": "string — 2-3 sentences to be read aloud in the final audio narration, written in second-person (you/your)"
     }
   ]
 }`
 
 async function structureBeliefs(rawBeliefNodes, apiKey) {
-  const prompt = `Here are the raw belief nodes extracted from a voice interview session:\n\n${JSON.stringify(rawBeliefNodes, null, 2)}\n\nPlease structure these into a complete Belief Origin Tree JSON.`
+  const prompt = `Here are the raw insight nodes extracted from a voice interview session:\n\n${JSON.stringify(rawBeliefNodes, null, 2)}\n\nPlease structure these into a complete Insight Origin JSON graph.`
 
   const ai = new GoogleGenAI({ apiKey })
 
