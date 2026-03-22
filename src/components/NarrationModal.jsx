@@ -38,18 +38,38 @@ const WEIGHT_COLORS = {
   profound: '#f87171', high: '#fb923c', medium: '#facc15', low: '#4ade80',
 }
 
+const PERSONAS = {
+  sage: { label: 'The Sage', voice: 'Puck', style: 'A wise, empathetic narrator uncovering deep psychological roots. Calm yet profound tone.' },
+  investigator: { label: 'The Investigator', voice: 'Aoede', style: 'An investigative, curious tone, analyzing connections logically but with warmth.' },
+  healer: { label: 'The Healer', voice: 'Charon', style: 'A soft, soothing, and incredibly empathetic voice. Comforting and warm.' },
+}
+
 export default function NarrationModal({ beliefs = [], session = {}, narrationText = '', onClose }) {
   const [currentIdx, setCurrentIdx] = useState(-1) // -1 = intro
   const [isPlaying, setIsPlaying] = useState(false)
   const [progress, setProgress] = useState(0)
   const [showBeliefs, setShowBeliefs] = useState([])
   const [isGenerating, setIsGenerating] = useState(false)
+  const [isRecording, setIsRecording] = useState(false)
   const [audioUrl, setAudioUrl] = useState(null)
+  const [persona, setPersona] = useState('sage')
   
   const audioRef = useRef(null)
   const intervalRef = useRef(null)
   const startRef = useRef(null)
   const durRef = useRef(0)
+
+  // Web Audio Context Refs
+  const audioCtxRef = useRef(null)
+  const audioDestRef = useRef(null)
+  const mediaRecorderRef = useRef(null)
+  const recordedChunksRef = useRef([])
+  const isRecordingRef = useRef(false)
+  const analyserRef = useRef(null)
+  const sourceRef = useRef(null)
+  const canvasRef = useRef(null)
+  const reqAnimRef = useRef(null)
+  const droneNodeRef = useRef(null)
 
   // Build full narration script
   const fullScript = narrationText ||
@@ -71,6 +91,18 @@ export default function NarrationModal({ beliefs = [], session = {}, narrationTe
     if (audioRef.current) {
       audioRef.current.pause()
     }
+    cancelAnimationFrame(reqAnimRef.current)
+    if (droneNodeRef.current && droneNodeRef.current.osc) {
+      try { droneNodeRef.current.osc.stop() } catch (e) {}
+    }
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+      mediaRecorderRef.current.stop()
+    }
+    isRecordingRef.current = false
+    setIsRecording(false)
+    if (audioCtxRef.current && audioCtxRef.current.state !== 'closed') {
+      audioCtxRef.current.suspend()
+    }
     setIsPlaying(false)
   }, [])
 
@@ -78,8 +110,129 @@ export default function NarrationModal({ beliefs = [], session = {}, narrationTe
     return () => {
       stopAll()
       if (audioUrl) URL.revokeObjectURL(audioUrl)
+      if (audioCtxRef.current) audioCtxRef.current.close()
     }
   }, [stopAll, audioUrl])
+
+  // Canvas visualizer loop
+  const drawVisualizer = useCallback(() => {
+    if (!canvasRef.current || !analyserRef.current) {
+       reqAnimRef.current = requestAnimationFrame(drawVisualizer)
+       return
+    }
+    const canvas = canvasRef.current
+    const ctx = canvas.getContext('2d')
+    const width = canvas.width
+    const height = canvas.height
+
+    const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount)
+    analyserRef.current.getByteFrequencyData(dataArray)
+
+    ctx.clearRect(0, 0, width, height)
+
+    const centerX = width / 2
+    const centerY = height / 2
+    const avg = dataArray.reduce((acc, val) => acc + val, 0) / dataArray.length
+    const radius = 100 + (avg * 1.5)
+
+    // Inner glow
+    ctx.beginPath()
+    ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI)
+    ctx.fillStyle = `rgba(129, 140, 248, ${0.05 + (avg / 255) * 0.1})`
+    ctx.filter = 'blur(20px)'
+    ctx.fill()
+    ctx.filter = 'none'
+
+    // Frequency ring
+    ctx.beginPath()
+    for (let i = 0; i < dataArray.length; i++) {
+        const angle = (i / dataArray.length) * Math.PI * 2
+        const r = radius * 0.8 + (dataArray[i] * 0.6)
+        const x = centerX + Math.cos(angle) * r
+        const y = centerY + Math.sin(angle) * r
+        if (i === 0) ctx.moveTo(x, y)
+        else ctx.lineTo(x, y)
+    }
+    ctx.closePath()
+    ctx.strokeStyle = `rgba(129, 140, 248, ${0.1 + (avg / 255) * 0.4})`
+    ctx.lineWidth = 1.5
+    ctx.stroke()
+
+    reqAnimRef.current = requestAnimationFrame(drawVisualizer)
+  }, [])
+
+  // Handle window resize for canvas
+  useEffect(() => {
+    const handleResize = () => {
+      if (canvasRef.current && canvasRef.current.parentElement) {
+        canvasRef.current.width = canvasRef.current.parentElement.clientWidth
+        canvasRef.current.height = canvasRef.current.parentElement.clientHeight
+      }
+    }
+    window.addEventListener('resize', handleResize)
+    handleResize() // Initial sizing
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
+  const initAudio = () => {
+    if (!audioCtxRef.current) {
+      audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)()
+      analyserRef.current = audioCtxRef.current.createAnalyser()
+      analyserRef.current.fftSize = 256
+      audioDestRef.current = audioCtxRef.current.createMediaStreamDestination()
+      
+      // Connect TTS Audio to analyser
+      if (audioRef.current && !sourceRef.current) {
+        sourceRef.current = audioCtxRef.current.createMediaElementSource(audioRef.current)
+        sourceRef.current.connect(analyserRef.current)
+        analyserRef.current.connect(audioCtxRef.current.destination)
+        analyserRef.current.connect(audioDestRef.current)
+      }
+
+      // Start generative ambient drone
+      const droneOsc = audioCtxRef.current.createOscillator()
+      droneOsc.type = 'sine'
+      // Set initial state based on current persona
+      if (persona === 'investigator') droneOsc.frequency.value = 110
+      else if (persona === 'healer') droneOsc.frequency.value = 73.42
+      else droneOsc.frequency.value = 55
+      
+      const droneFilter = audioCtxRef.current.createBiquadFilter()
+      droneFilter.type = 'lowpass'
+      if (persona === 'investigator') droneFilter.frequency.value = 300
+      else if (persona === 'healer') droneFilter.frequency.value = 200
+      else droneFilter.frequency.value = 150
+
+      const droneGain = audioCtxRef.current.createGain()
+      droneGain.gain.value = 0.08
+
+      droneOsc.connect(droneFilter)
+      droneFilter.connect(droneGain)
+      droneGain.connect(audioCtxRef.current.destination)
+      droneGain.connect(audioDestRef.current)
+      droneOsc.start()
+      droneNodeRef.current = { osc: droneOsc, filter: droneFilter }
+      
+      reqAnimRef.current = requestAnimationFrame(drawVisualizer)
+    } else if (droneNodeRef.current) {
+        // Update existing drone parameters dynamically if already initialized
+        const now = audioCtxRef.current.currentTime
+        const { osc, filter } = droneNodeRef.current
+        if (persona === 'sage') {
+            osc.frequency.setTargetAtTime(55, now, 1)
+            filter.frequency.setTargetAtTime(150, now, 1)
+        } else if (persona === 'investigator') {
+            osc.frequency.setTargetAtTime(110, now, 1)
+            filter.frequency.setTargetAtTime(300, now, 1)
+        } else if (persona === 'healer') {
+            osc.frequency.setTargetAtTime(73.42, now, 1)
+            filter.frequency.setTargetAtTime(200, now, 1)
+        }
+    }
+    if (audioCtxRef.current.state === 'suspended') {
+      audioCtxRef.current.resume()
+    }
+  }
 
   // Sync belief cards to narration progress
   const startProgressTracker = (estimated) => {
@@ -106,40 +259,87 @@ export default function NarrationModal({ beliefs = [], session = {}, narrationTe
     }, 200)
   }
 
-  const handlePlay = async () => {
-    if (isPlaying) {
-      audioRef.current?.pause()
-      setIsPlaying(false)
-      return
+  const startRecordingStream = () => {
+    if (!canvasRef.current || !audioCtxRef.current || !audioDestRef.current) return
+    const canvasStream = canvasRef.current.captureStream(30)
+    const combinedStream = new MediaStream([
+      ...canvasStream.getVideoTracks(),
+      ...audioDestRef.current.stream.getAudioTracks()
+    ])
+    
+    let options = { mimeType: 'video/webm;codecs=vp9,opus' }
+    if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+      options = { mimeType: 'video/webm;codecs=vp8,opus' }
+    }
+    if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+      options = { mimeType: 'video/webm' }
+    }
+    
+    mediaRecorderRef.current = new MediaRecorder(combinedStream, options)
+    recordedChunksRef.current = []
+    
+    mediaRecorderRef.current.ondataavailable = (e) => {
+      if (e.data.size > 0) recordedChunksRef.current.push(e.data)
+    }
+    
+    mediaRecorderRef.current.onstop = () => {
+      if (recordedChunksRef.current.length === 0) return
+      const blob = new Blob(recordedChunksRef.current, { type: options.mimeType || 'video/webm' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.style.display = 'none'
+      a.href = url
+      a.download = `MindRoots_Documentary_${persona}.webm`
+      document.body.appendChild(a)
+      a.click()
+      setTimeout(() => { URL.revokeObjectURL(url); document.body.removeChild(a) }, 100)
     }
 
-    if (audioUrl && audioRef.current) {
-      audioRef.current.play()
-      setIsPlaying(true)
-      return
-    }
+    mediaRecorderRef.current.start(100)
+    setIsRecording(true)
+    isRecordingRef.current = true
+  }
 
-    // Generate audio for the first time
+  const setupAudioElement = async (recordMode = false) => {
     try {
-      setIsGenerating(true)
-      const url = await ttsService.generateAudio(fullScript, {
-        voice: 'Puck',
-        style: 'A wise, empathetic narrator uncovering deep psychological roots. Calm yet profound tone.'
-      })
-      setAudioUrl(url)
-      
-      const audio = new Audio(url)
-      audioRef.current = audio
-      
-      audio.onloadedmetadata = () => {
-        durRef.current = audio.duration
+      if (!audioUrl || !audioRef.current || audioRef.current.src === '') {
+        setIsGenerating(true)
+        const url = await ttsService.generateAudio(fullScript, {
+          voice: PERSONAS[persona].voice,
+          style: PERSONAS[persona].style
+        })
+        setAudioUrl(url)
+        
+        if (audioRef.current) {
+          audioRef.current.pause()
+          audioRef.current.src = ''
+          if (sourceRef.current) {
+            sourceRef.current.disconnect()
+            sourceRef.current = null
+          }
+        }
+
+        const audio = new Audio(url)
+        audio.crossOrigin = 'anonymous'
+        audioRef.current = audio
       }
 
+      initAudio()
+      
+      const audio = audioRef.current
+      if (recordMode) {
+        audio.currentTime = 0
+        setProgress(0)
+        setCurrentIdx(-1)
+        setShowBeliefs([])
+      }
+
+      audio.onloadedmetadata = () => { durRef.current = audio.duration }
+      
       audio.ontimeupdate = () => {
         const pct = (audio.currentTime / audio.duration) * 100
         setProgress(pct)
 
-        // Advance belief cards based on progress
         const beliefDuration = audio.duration / Math.max(beliefs.length + 2, 1)
         const introDuration = beliefDuration
         const beliefIdx = Math.floor((audio.currentTime - introDuration) / beliefDuration)
@@ -156,15 +356,60 @@ export default function NarrationModal({ beliefs = [], session = {}, narrationTe
         setIsPlaying(false)
         setProgress(100)
         setCurrentIdx(beliefs.length)
+        if (isRecordingRef.current && mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+          mediaRecorderRef.current.stop()
+          setIsRecording(false)
+          isRecordingRef.current = false
+        }
       }
 
-      await audio.play()
-      setIsPlaying(true)
+      if (recordMode) {
+        startRecordingStream()
+      }
+
+      try {
+        await audio.play()
+        setIsPlaying(true)
+        if (audioCtxRef.current?.state === 'suspended') audioCtxRef.current.resume()
+      } catch (playError) {
+        if (playError.name !== 'AbortError') throw playError
+      }
+
     } catch (error) {
-      console.error('Failed to play narration:', error)
+      console.error('Failed to play/record narration:', error)
+      setIsRecording(false)
+      isRecordingRef.current = false
     } finally {
       setIsGenerating(false)
     }
+  }
+
+  const handlePlay = async () => {
+    if (isPlaying) {
+      audioRef.current?.pause()
+      setIsPlaying(false)
+      return
+    }
+
+    if (audioUrl && audioRef.current) {
+      try {
+        await audioRef.current.play()
+        setIsPlaying(true)
+        if (audioCtxRef.current?.state === 'suspended') audioCtxRef.current.resume()
+      } catch (playError) {
+        if (playError.name !== 'AbortError') {
+          console.error('Failed to resume narration:', playError)
+        }
+      }
+      return
+    }
+
+    await setupAudioElement(false)
+  }
+
+  const handleRecord = async () => {
+    if (isPlaying) stopAll()
+    await setupAudioElement(true)
   }
 
   const handleClose = () => { stopAll(); onClose?.() }
@@ -177,8 +422,13 @@ export default function NarrationModal({ beliefs = [], session = {}, narrationTe
   }
 
   return (
-    <div className="fixed inset-0 z-[100] flex flex-col bg-black" style={{ animation: 'fadeIn 0.4s ease' }}>
+    <div className="fixed inset-0 z-[100] flex flex-col bg-black overflow-hidden" style={{ animation: 'fadeIn 0.4s ease' }}>
       <style>{`@keyframes fadeIn{from{opacity:0}to{opacity:1}} @keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}`}</style>
+      
+      {/* Background Visualizer */}
+      <div className="absolute inset-0 pointer-events-none opacity-40">
+        <canvas ref={canvasRef} className="w-full h-full" />
+      </div>
       <AmbientRoots />
 
       {/* Top bar */}
@@ -264,20 +514,66 @@ export default function NarrationModal({ beliefs = [], session = {}, narrationTe
         </div>
 
         <div className="flex items-center justify-between">
-          <span className="text-[10px] text-slate-600 font-mono">{formatTime(progress)}</span>
+          <div className="flex items-center gap-4">
+            <span className="text-[10px] text-slate-600 font-mono">{formatTime(progress)}</span>
+            
+            <div className="relative group">
+              <select 
+                value={persona}
+                onChange={(e) => {
+                  setPersona(e.target.value)
+                  setAudioUrl(null)
+                  setProgress(0)
+                  setCurrentIdx(-1)
+                  setShowBeliefs([])
+                }}
+                disabled={isGenerating || isPlaying}
+                className="appearance-none bg-white/5 border border-white/10 rounded-full px-4 py-1.5 text-xs text-slate-300 font-medium outline-none cursor-pointer disabled:opacity-50 transition-colors hover:bg-white/10"
+              >
+                {Object.entries(PERSONAS).map(([key, data]) => (
+                  <option key={key} value={key} className="bg-slate-900">{data.label}</option>
+                ))}
+              </select>
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none opacity-50">
+                <span className="material-symbols-outlined text-[14px]">expand_more</span>
+              </div>
+            </div>
+          </div>
 
           <button onClick={handlePlay}
-            className="flex items-center gap-2.5 px-6 py-2.5 rounded-full font-bold text-sm transition-all"
+            className="flex items-center gap-2.5 px-6 py-2.5 rounded-full font-bold text-sm transition-all shadow-lg hover:shadow-[#4f46e5]/40 disabled:opacity-50"
+            disabled={isRecording}
             style={{
-              background: isPlaying ? 'rgba(129,140,248,0.1)' : 'linear-gradient(135deg,#4f46e5,#818CF8)',
+              background: isPlaying && !isRecording ? 'rgba(129,140,248,0.1)' : 'transparent',
               border: '1px solid rgba(129,140,248,0.4)',
-              color: '#fff',
-              boxShadow: isPlaying ? 'none' : '0 0 20px rgba(129,140,248,0.3)'
+              color: '#818CF8'
             }}>
             <span className="material-symbols-outlined text-[18px]">
-              {isGenerating ? 'sync' : isPlaying ? 'pause' : 'play_arrow'}
+              {isGenerating && !isRecording ? 'sync' : isPlaying && !isRecording ? 'pause' : 'play_arrow'}
             </span>
-            {isGenerating ? 'Generating Audio...' : isPlaying ? 'Pause' : progress > 0 ? 'Resume' : 'Play Documentary'}
+            {isGenerating && !isRecording ? 'Loading...' : isPlaying && !isRecording ? 'Pause' : progress > 0 ? 'Resume' : 'Play'}
+          </button>
+
+          <button onClick={handleRecord}
+            disabled={isGenerating}
+            className="flex items-center gap-2.5 px-6 py-2.5 rounded-full font-bold text-sm transition-all disabled:opacity-50"
+            style={{
+              background: isRecording ? 'rgba(239,68,68,0.1)' : 'linear-gradient(135deg,#4f46e5,#818CF8)',
+              border: isRecording ? '1px solid rgba(239,68,68,0.4)' : '1px solid rgba(129,140,248,0.4)',
+              color: isRecording ? '#ef4444' : '#fff',
+              boxShadow: isRecording ? '0 0 20px rgba(239,68,68,0.3)' : '0 0 20px rgba(129,140,248,0.3)'
+            }}>
+            <span className="relative flex h-3 w-3">
+              {isRecording ? (
+                <>
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                </>
+              ) : (
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-white"></span>
+              )}
+            </span>
+            {isRecording ? 'Recording Video...' : 'Record & Download'}
           </button>
 
           <span className="text-[10px] text-slate-600 font-mono">
