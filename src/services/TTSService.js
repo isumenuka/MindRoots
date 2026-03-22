@@ -11,25 +11,28 @@ class TTSService {
   }
 
   /**
-   * Generates audio from text using Gemini TTS.
+   * Generates audio and returns both the ArrayBuffer and Blob URL.
+   * Useful for Web Audio API contexts where fetch(blobUrl) might fail due to extensions.
    * @param {string} text - The text to speak.
    * @param {Object} options - voice, style, speed, pitch.
-   * @returns {Promise<string>} - A URL for the audio blob.
+   * @returns {Promise<{blobUrl: string, arrayBuffer: ArrayBuffer}>}
    */
-  async generateAudio(text, options = {}) {
+  async getAudioData(text, options = {}) {
     if (!text) return null;
 
     const cacheKey = JSON.stringify({ text, ...options });
     if (this.cache.has(cacheKey)) {
-      return this.cache.get(cacheKey);
+      const blob = this.cache.get(cacheKey);
+      return {
+        blobUrl: URL.createObjectURL(blob),
+        arrayBuffer: await blob.arrayBuffer()
+      };
     }
 
     try {
       const response = await fetch(`${BACKEND_URL}/api/tts`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           text,
           voice: options.voice || 'Puck',
@@ -44,14 +47,28 @@ class TTSService {
       }
 
       const blob = await response.blob();
-      const audioUrl = URL.createObjectURL(blob);
+      this.cache.set(cacheKey, blob);
       
-      this.cache.set(cacheKey, audioUrl);
-      return audioUrl;
+      return {
+        blobUrl: URL.createObjectURL(blob),
+        arrayBuffer: await blob.arrayBuffer()
+      };
     } catch (error) {
       console.error('[TTSService] Failed to generate audio:', error);
       throw error;
     }
+  }
+
+  /**
+   * Generates audio from text using Gemini TTS returning just the URL.
+   * Kept for backwards compatibility with AudioPlayer.
+   * @param {string} text - The text to speak.
+   * @param {Object} options - voice, style, speed, pitch.
+   * @returns {Promise<string>} - A URL for the audio blob.
+   */
+  async generateAudio(text, options = {}) {
+    const data = await this.getAudioData(text, options);
+    return data ? data.blobUrl : null;
   }
 
   /**
