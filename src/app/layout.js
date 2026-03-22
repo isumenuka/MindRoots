@@ -7,6 +7,12 @@ export const metadata = {
   keywords: 'belief archaeology, AI therapy, limiting beliefs, cognitive patterns, mindset',
 }
 
+export const viewport = {
+  themeColor: '#0A0A0A',
+  width: 'device-width',
+  initialScale: 1,
+}
+
 export default function RootLayout({ children }) {
   return (
     <html lang="en" suppressHydrationWarning>
