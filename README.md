@@ -10,52 +10,113 @@
 *   **User Authentication & Data Persistence:** Integrated with Firebase Authentication (Google Sign-in) and Cloud Firestore to track user state, generated "Belief Trees", and session data.
 *   **Nano Banana Integration:** Utilizes Gemini image generation models to dynamically create visual metaphors based on conversation context.
 
-## 🏗️ Architecture
+## 🏗️ Architecture (Technical Deep-Dive v3.0)
 
-MindRoots uses a multimodal, real-time architecture optimized for low-latency AI interactions and structured self-reflection.
+This section provides a granular look at the specialized pipelines and service interactions that enable MindRoots' low-latency, multimodal AI experience.
 
-### 🎭 System Interaction Flow
-The following diagram details the real-time audio pipeline and the interaction between core services:
+### 🎙️ Real-Time Audio & AI Pipeline
+
+MindRoots utilizes a specialized Web Audio pipeline to meet the strict requirements of the Gemini Multimodal Live API (16-bit Mono PCM @ 16kHz).
+
+```mermaid
+sequenceDiagram
+    participant Mic as User Microphone
+    participant AW as AudioWorklet (Tread)
+    participant Store as Zustand (Main Thread)
+    participant WSS as Gemini Live (WebSocket)
+    participant API as Gemini Flash (REST)
+
+    Mic->>AW: Raw Float32 Audio Stream
+    Note over AW: Downsample 48kHz -> 16kHz<br/>Convert Float32 -> Int16
+    AW-->>Store: Buffered PCM Chunks
+    
+    Store->>WSS: Send Base64 PCM via WSS
+    WSS-->>Store: Real-time Transcript & Audio
+    
+    Note over Store: User stops speaking
+    Store->>API: Send transcript for analysis
+    API-->>Store: Structured Belief JSON
+    Note over Store: Update xyflow Belief Map
+```
+
+### 🏗️ Component Interaction Map
+
+A detailed view of how the various frontend services and backend endpoints collaborate.
 
 ```mermaid
 graph TB
-    subgraph "Client: Next.js + Web Audio"
+    subgraph "Frontend (Next.js App Router)"
         direction TB
-        Mic["🎤 Microphone Input"]
-        AW["⚙️ AudioWorklet (16kHz PCM)"]
-        Store["📦 Zustand State Store"]
-        XY["📊 xyflow: Belief Map"]
+        UI["React UI (Framer Motion)"]
+        Store["Zustand Store (Source of Truth)"]
         
-        Mic --> AW
-        AW -- "Int16 Chunks" --> Store
+        subgraph "Services Layer"
+            GLS["GeminiLiveService (WSS)"]
+            GFS["GeminiFlashService (Structured Data)"]
+            PS["PdfService"]
+            TTS["TTSService"]
+        end
+        
+        subgraph "Visualization"
+            XY["xyflow (Belief Map)"]
+            WV["Waveform Visualizer"]
+        end
     end
 
-    subgraph "Backend: FastAPI Engine"
-        Token["🔑 Ephemeral Token API"]
-        PDF["📄 ReportLab PDF Gen"]
-        TTS["🗣️ Gemini TTS Engine"]
+    subgraph "Backend (FastAPI)"
+        TH["Token Handler (Ephemeral JWT)"]
+        PE["PDF Engine (ReportLab)"]
+        TE["TTS Engine (Gemini Flash TTS)"]
     end
 
-    subgraph "AI Services: Google Gemini"
-        Live["⚡ Gemini 2.5 Live (WSS)"]
-        Flash["🧠 Gemini 2.5 Flash (Analysis)"]
+    subgraph "Google Cloud / AI"
+        G_LIVE["Gemini 2.5 Live API"]
+        G_FLASH["Gemini 2.5 Flash API"]
+        FIRE["Firestore DB"]
+        AUTH["Firebase Auth"]
     end
 
-    %% Core Data Loops
-    Store <--> Live
-    Live -- "Transcriptions" --> Flash
-    Flash -- "Belief JSON" --> Store
-    Store --> XY
+    %% Flow: UI to Store
+    UI <--> Store
+    Store <--> XY
+    Store <--> WV
+
+    %% Flow: Store to Services
+    Store <--> GLS
+    Store <--> GFS
+    Store --> PS
+    Store --> TTS
+
+    %% External Connections
+    GLS <--> G_LIVE
+    GFS <--> G_FLASH
     
-    %% Support Services
-    Store -- "Auth" --> Token
-    Token -- "JWT" --> Live
-    Store -- "beliefTree" --> PDF
-    Store -- "Text" --> TTS
+    PS -- "beliefTree JSON" --> PE
+    TTS -- "Markdown" --> TE
+    
+    Store -- "Credential" --> TH
+    TH -- "auth_tokens.create" --> G_LIVE
+    
+    Store <--> FIRE
+    Store <--> AUTH
 ```
 
-### 🛰️ Technical Deep-Dive
-For a more granular look at the implementation details (including the AudioWorklet downsampling and the state-to-visualization logic), please refer to the [Technical Architecture v3.0](file:///C:/Users/Isum%20Enuka/.gemini/antigravity/brain/997c8502-d16d-4a25-8c7a-2f4ca4dfa341/architecture_v3.md) document.
+### 🔐 Authentication & Token Delegation
+
+To keep API keys away from the client while maintaining direct low-latency connections, MindRoots uses an ephemeral token strategy.
+
+1.  **Client Request:** React sends a request to `/api/token` with user credentials.
+2.  **Validation:** FastAPI verifies the session.
+3.  **Delegation:** Backend calls Google Vertex/AI Studio `auth_tokens.create` with a 30-minute expiry.
+4.  **Connection:** Frontend uses the short-lived token to establish a direct WSS connection to Google's edge.
+
+### 📄 PDF Generation Engine (ReportLab)
+
+Unlike simple HTML-to-PDF tools, MindRoots uses a custom server-side drawing engine for premium typography.
+- **Header:** Injected system branding and session metadata.
+- **Style Definition:** High-contrast dark mode style sheets for multi-line JSON beliefs.
+- **Belief Cards:** Uses `KeepTogether` flowables to ensure belief origins aren't split across pages.
+- **Background:** Canvas-level drawing of watermarks and gradient borders.
 
 ## 🛠️ Technologies Used
 
