@@ -12,7 +12,50 @@
 
 ## 🏗️ Architecture
 
-![MindRoots Architecture Diagram](public/architecture.png)
+MindRoots uses a multimodal, real-time architecture optimized for low-latency AI interactions and structured self-reflection.
+
+### 🎭 System Interaction Flow
+The following diagram details the real-time audio pipeline and the interaction between core services:
+
+```mermaid
+graph TB
+    subgraph "Client: Next.js + Web Audio"
+        direction TB
+        Mic["🎤 Microphone Input"]
+        AW["⚙️ AudioWorklet (16kHz PCM)"]
+        Store["📦 Zustand State Store"]
+        XY["📊 xyflow: Belief Map"]
+        
+        Mic --> AW
+        AW -- "Int16 Chunks" --> Store
+    end
+
+    subgraph "Backend: FastAPI Engine"
+        Token["🔑 Ephemeral Token API"]
+        PDF["📄 ReportLab PDF Gen"]
+        TTS["🗣️ Gemini TTS Engine"]
+    end
+
+    subgraph "AI Services: Google Gemini"
+        Live["⚡ Gemini 2.5 Live (WSS)"]
+        Flash["🧠 Gemini 2.5 Flash (Analysis)"]
+    end
+
+    %% Core Data Loops
+    Store <--> Live
+    Live -- "Transcriptions" --> Flash
+    Flash -- "Belief JSON" --> Store
+    Store --> XY
+    
+    %% Support Services
+    Store -- "Auth" --> Token
+    Token -- "JWT" --> Live
+    Store -- "beliefTree" --> PDF
+    Store -- "Text" --> TTS
+```
+
+### 🛰️ Technical Deep-Dive
+For a more granular look at the implementation details (including the AudioWorklet downsampling and the state-to-visualization logic), please refer to the [Technical Architecture v3.0](file:///C:/Users/Isum%20Enuka/.gemini/antigravity/brain/997c8502-d16d-4a25-8c7a-2f4ca4dfa341/architecture_v3.md) document.
 
 ## 🛠️ Technologies Used
 
@@ -94,12 +137,3 @@ This repository includes Infrastructure-as-Code configurations to automate cloud
 2.  **Backend `backend/Dockerfile`:** Automates the Python environment setup and uvicorn server execution for the FastAPI service.
 3.  **Firebase Configs:** `firebase.json` and `firestore.rules` define deployed cloud database structures and security rules.
 
-## 🧪 Reproducible Testing
-
-Judges and reviewers can reproduce the main testing flow of MindRoots without going through the authentication onboarding loop:
-
-1. **Start the Application:** Run `.\start.ps1` as described above to ensure both servers are active.
-2. **Access the Testing Route:** Navigate directly to `http://localhost:3000/demo`.
-3. **Bypass Auth:** This dedicated route bypasses Firebase Authentication constraints for quick evaluation.
-4. **Test Real-Time Audio:** Allow microphone permissions when prompted. The connection to the backend and the Gemini Live API will establish automatically.
-5. **Verify AI Agent:** Speak into the microphone. You should hear the Gemini model (using the 'Puck' voice) respond to you in real-time, validating the core WebSockets and AudioWorklet pipelines.

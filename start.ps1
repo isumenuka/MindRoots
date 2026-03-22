@@ -63,7 +63,7 @@ Write-Host ""
 Start-Process powershell -ArgumentList @(
     "-NoExit",
     "-Command",
-    "Set-Location '$root\backend'; Write-Host '--- MindRoots Backend ---' -ForegroundColor Yellow; .\.venv\Scripts\Activate.ps1; python server.py"
+    "Set-Location '$root\backend'; Write-Host '--- MindRoots Backend ---' -ForegroundColor Yellow; if (Get-Command uv -ErrorAction SilentlyContinue) { uv run python server.py } else { if (Test-Path '.\.venv\Scripts\Activate.ps1') { .\.venv\Scripts\Activate.ps1 }; python server.py }"
 )
 
 Start-Sleep -Seconds 1
