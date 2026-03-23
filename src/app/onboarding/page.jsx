@@ -1,6 +1,7 @@
 'use client'
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { auth, markOnboardingComplete, onAuthStateChanged, getUserDoc } from '@/services/FirebaseService'
 import useAppStore from '@/store/useAppStore'
 import { motion } from 'framer-motion'
@@ -288,7 +289,7 @@ export default function OnboardingPage() {
                 <span className="material-symbols-outlined">arrow_forward</span>
               </button>
               <p className="text-slate-500 text-xs px-8">
-                By finishing setup, you agree to our <a className="text-primary hover:underline" href="#">Security Protocol</a> and <a className="text-primary hover:underline" href="#">Privacy Terms</a>.
+                By finishing setup, you agree to our <Link className="text-primary hover:underline" href="/security">Security Protocol</Link> and <Link className="text-primary hover:underline" href="/privacy">Privacy Terms</Link>.
               </p>
             </div>
             

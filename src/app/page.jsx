@@ -316,8 +316,8 @@ export default function LandingPage() {
                 <span>{signingIn ? 'Signing in...' : 'Continue with Google'}</span>
               </button>
               <p className="text-[10px] text-center text-slate-500 mt-6 leading-relaxed">
-                By signing up, you agree to our <a href="#" className="underline">Terms</a> and{' '}
-                <a href="#" className="underline">Privacy Policy</a>.
+                By signing up, you agree to our <Link href="/terms" className="underline">Terms</Link> and{' '}
+                <Link href="/privacy" className="underline">Privacy Policy</Link>.
               </p>
             </div>
           </div>
@@ -332,9 +332,9 @@ export default function LandingPage() {
             <span className="text-xs text-slate-500">© 2026 MindRoots AI. All rights reserved.</span>
           </div>
           <div suppressHydrationWarning className="flex gap-8 text-[11px] font-semibold tracking-wide uppercase text-slate-500">
-            <a href="#" className="hover:text-[#818CF8] transition-colors">Privacy</a>
-            <a href="#" className="hover:text-[#818CF8] transition-colors">Security</a>
-            <a href="#" className="hover:text-[#818CF8] transition-colors">Contact</a>
+            <Link href="/privacy" className="hover:text-[#818CF8] transition-colors">Privacy</Link>
+            <Link href="/security" className="hover:text-[#818CF8] transition-colors">Security</Link>
+            <Link href="/contact" className="hover:text-[#818CF8] transition-colors">Contact</Link>
           </div>
         </div>
       </footer>
