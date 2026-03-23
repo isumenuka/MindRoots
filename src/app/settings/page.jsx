@@ -126,7 +126,7 @@ function SettingsInner() {
       <main className="flex-1 overflow-y-auto relative z-10">
         {/* Top bar */}
         <header className="h-14 flex items-center justify-between px-4 lg:px-8 border-b border-white/5 sticky top-0 bg-[#0A0A0A]/80 backdrop-blur-xl z-20">
-          <div className="flex items-center gap-2 text-xs uppercase tracking-widest font-semibold text-slate-500">
+          <div className="flex items-center gap-2 text-xs uppercase tracking-widest font-semibold text-slate-500 pl-10 md:pl-0">
             <span>Account</span>
             <span className="material-symbols-outlined text-[14px]">chevron_right</span>
             <span className="text-slate-200 capitalize">{activeTab}</span>

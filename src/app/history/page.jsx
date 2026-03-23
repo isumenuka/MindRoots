@@ -72,7 +72,7 @@ export default function HistoryPage() {
   }
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-[#0A0A0A] text-slate-100 font-sans relative">
+    <div className="flex h-screen w-full overflow-hidden bg-[#0A0A0A] text-slate-100 font-sans relative" style={{touchAction:'pan-y'}}>
       {/* Ambient background */}
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-[-20%] right-[-10%] w-[50%] h-[50%] bg-[#818CF8]/5 blur-[140px] rounded-full" />
@@ -83,9 +83,9 @@ export default function HistoryPage() {
       <AppSidebar user={user} onSignOut={handleSignOut} signingOut={signingOut} />
 
       {/* Mobile top bar */}
-      <div className="md:hidden absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-5 h-14 border-b border-white/5 bg-[#0A0A0A]/90 backdrop-blur-xl">
-        <span className="font-display font-bold text-white text-lg">History</span>
-        <button onClick={() => router.push('/settings')} className="w-9 h-9 rounded-full overflow-hidden border border-white/10 flex items-center justify-center bg-white/5">
+      <div className="md:hidden fixed top-0 left-0 right-0 z-20 flex items-center justify-center px-14 h-14 border-b border-white/5 bg-[#0A0A0A]/90 backdrop-blur-xl">
+        <span className="font-display font-bold text-white text-lg">Archives</span>
+        <button onClick={() => router.push('/settings')} className="absolute right-4 w-9 h-9 rounded-full overflow-hidden border border-white/10 flex items-center justify-center bg-white/5">
           {user?.photoURL
             ? <img src={user.photoURL} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
             : <span className="material-symbols-outlined text-[18px] text-slate-400">person</span>
@@ -95,7 +95,7 @@ export default function HistoryPage() {
 
       {/* Main content */}
       <main className="flex-1 overflow-y-auto relative z-10 pt-14 md:pt-0">
-        <div className="max-w-[1400px] mx-auto px-4 lg:px-8 py-8 md:py-10">
+        <div className="max-w-[1400px] mx-auto px-4 lg:px-8 py-8 md:py-10 pb-24 md:pb-10">
 
           {/* Header */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-10">

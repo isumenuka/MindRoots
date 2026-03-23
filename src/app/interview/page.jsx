@@ -318,7 +318,7 @@ export default function InterviewPage() {
       </header>
 
       {/* Floating Extracted Beliefs Ticker */}
-      <div className="fixed right-6 top-28 bottom-28 z-40 flex flex-col gap-2.5 w-auto items-end pointer-events-none overflow-hidden p-2 justify-start">
+      <div className="hidden sm:flex fixed right-6 top-28 bottom-28 z-40 flex-col gap-2.5 w-auto items-end pointer-events-none overflow-hidden p-2 justify-start">
         <AnimatePresence>
           {beliefs.map((b, i) => {
             const info = getNodeDisplayInfo(b)
@@ -348,7 +348,7 @@ export default function InterviewPage() {
       <main className="relative z-10 flex-1 flex flex-col items-center justify-center px-6">
         <div className="flex flex-col items-center gap-8 w-full">
           {/* Waveform */}
-          <div className="flex items-end justify-center gap-1.5 h-48 w-full max-w-2xl text-accent">
+          <div className="flex items-end justify-center gap-1.5 h-32 sm:h-48 w-full max-w-2xl text-accent">
             <WaveformVisualizer
               analyser={currentAnalyser}
               isActive={isCapturing || agentStatus === 'speaking'}
@@ -445,7 +445,7 @@ export default function InterviewPage() {
       </AnimatePresence>
 
       {/* Footer mic controls */}
-      <footer className="relative z-10 flex flex-col items-center gap-4 pb-10 px-6">
+      <footer className="relative z-10 flex flex-col items-center gap-4 pb-6 sm:pb-10 px-6">
         <div className="flex gap-3 items-center">
           {/* Mic */}
           <button

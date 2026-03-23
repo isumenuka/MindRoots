@@ -154,7 +154,7 @@ export default function LandingPage() {
       </nav>
 
       {/* Hero */}
-      <section suppressHydrationWarning className="relative w-full pt-44 pb-24 overflow-hidden">
+      <section suppressHydrationWarning className="relative w-full pt-32 sm:pt-44 pb-16 sm:pb-24 overflow-hidden">
         {/* Background container with a gradient mask to fade it seamlessly top and bottom */}
         <div 
           className="absolute inset-x-0 top-24 bottom-0 z-0 pointer-events-none"
@@ -192,7 +192,7 @@ export default function LandingPage() {
           >
             <ShinyText 
               text="What beliefs are silently running your life?" 
-              className="text-5xl md:text-7xl font-display font-bold" 
+              className="text-3xl sm:text-5xl md:text-7xl font-display font-bold" 
             />
           </motion.h1>
 
@@ -304,8 +304,8 @@ export default function LandingPage() {
 
       {/* Sign-up CTA */}
       <section suppressHydrationWarning id="signup-cta" className="py-20 max-w-7xl mx-auto px-6">
-        <div suppressHydrationWarning className="glass-card rounded-3xl overflow-hidden grid lg:grid-cols-2">
-          <div suppressHydrationWarning className="p-12 md:p-16 flex flex-col justify-center">
+        <div suppressHydrationWarning className="glass-card rounded-3xl overflow-hidden grid grid-cols-1 lg:grid-cols-2">
+          <div suppressHydrationWarning className="p-8 sm:p-12 md:p-16 flex flex-col justify-center">
             <h2 className="text-4xl md:text-5xl font-display font-bold text-white mb-6">Ready to dig deeper?</h2>
             <p className="text-slate-400 text-lg mb-10 max-w-md">
               Join thousands of founders, executives, and coaches who've excavated the foundations of their cognitive landscape.
@@ -351,7 +351,7 @@ export default function LandingPage() {
             <span className="material-symbols-outlined text-[#818CF8]">psychology</span>
             <span className="text-xs text-slate-500">© 2026 MindRoots AI. All rights reserved.</span>
           </div>
-          <div suppressHydrationWarning className="flex gap-8 text-[11px] font-semibold tracking-wide uppercase text-slate-500">
+          <div suppressHydrationWarning className="flex flex-wrap gap-4 sm:gap-8 text-[11px] font-semibold tracking-wide uppercase text-slate-500">
             <Link href="/privacy" className="hover:text-[#818CF8] transition-colors">Privacy</Link>
             <Link href="/security" className="hover:text-[#818CF8] transition-colors">Security</Link>
             <Link href="/contact" className="hover:text-[#818CF8] transition-colors">Contact</Link>

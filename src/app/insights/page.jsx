@@ -147,8 +147,19 @@ export default function InsightsPage() {
 
       <AppSidebar user={user} onSignOut={handleSignOut} signingOut={signingOut} />
 
-      <main className="flex-1 overflow-y-auto relative z-10">
-        <div className="max-w-[1400px] mx-auto px-4 lg:px-8 py-8 md:py-10">
+      {/* Mobile top bar */}
+      <div className="md:hidden fixed top-0 left-0 right-0 z-20 flex items-center justify-center px-14 h-14 border-b border-white/5 bg-[#0A0A0A]/90 backdrop-blur-xl">
+        <span className="font-display font-bold text-white text-lg">Insights</span>
+        <button onClick={() => router.push('/settings')} className="absolute right-4 w-9 h-9 rounded-full overflow-hidden border border-white/10 flex items-center justify-center bg-white/5">
+          {user?.photoURL
+            ? <img src={user.photoURL} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+            : <span className="material-symbols-outlined text-[18px] text-slate-400">person</span>
+          }
+        </button>
+      </div>
+
+      <main className="flex-1 overflow-y-auto relative z-10 pt-14 md:pt-0">
+        <div className="max-w-[1400px] mx-auto px-4 lg:px-8 py-8 md:py-10 pb-24 md:pb-10">
 
           {/* Header */}
           <div className="mb-10">
@@ -175,7 +186,7 @@ export default function InsightsPage() {
             <div className="space-y-10">
 
               {/* ── 1. Summary Stats ── */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <StatCard icon="psychology"    label="Total Sessions"     value={totalSessions} sub="completed excavations" />
                 <StatCard icon="hub"           label="Total Beliefs Found" value={totalBeliefs}  sub="across all sessions"   accent="#fb923c" />
                 <StatCard icon="calculate"     label="Avg Beliefs/Session" value={avgPerSession} sub="depth indicator"       accent="#facc15" />
