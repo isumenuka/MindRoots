@@ -26,6 +26,7 @@ module.exports = {
         'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         'float': 'float 6s ease-in-out infinite',
         'waveform': 'waveform 1.2s ease-in-out infinite',
+        'shine': 'shine 5s linear infinite',
       },
       keyframes: {
         float: {
@@ -35,6 +36,10 @@ module.exports = {
         waveform: {
           '0%, 100%': { scaleY: 0.3 },
           '50%': { scaleY: 1 },
+        },
+        shine: {
+          '0%': { 'background-position': '100%' },
+          '100%': { 'background-position': '-100%' },
         },
       },
       backdropBlur: {

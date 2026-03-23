@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
+import ShinyText from '@/components/ShinyText'
 import { auth, signInWithGoogle, onAuthStateChanged, getUserDoc } from '@/services/FirebaseService'
 import useAppStore from '@/store/useAppStore'
 import AppLogo from '@/components/AppLogo'
@@ -187,11 +188,12 @@ export default function LandingPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.1, ease: "easeOut" }}
-            className="text-5xl md:text-7xl font-display font-bold text-white mb-6 leading-tight"
+            className="w-full flex justify-center mb-6 leading-tight"
           >
-            What beliefs are<br />
-            <span className="text-slate-400">silently running</span>{' '}
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#818CF8] to-[#a78bfa]">your life?</span>
+            <ShinyText 
+              text="What beliefs are silently running your life?" 
+              className="text-5xl md:text-7xl font-display font-bold" 
+            />
           </motion.h1>
 
           <motion.p 
