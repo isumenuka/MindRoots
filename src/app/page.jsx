@@ -153,17 +153,35 @@ export default function LandingPage() {
       </nav>
 
       {/* Hero */}
-      <section suppressHydrationWarning className="relative pt-44 pb-24 overflow-hidden">
-        <div suppressHydrationWarning className="max-w-5xl mx-auto px-6 text-center">
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, ease: "easeOut" }}
-            suppressHydrationWarning className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#818CF8]/10 border border-[#818CF8]/20 text-[#818CF8] text-[10px] font-bold uppercase tracking-widest mb-8"
-          >
-            <span className="material-symbols-outlined text-sm">auto_awesome</span>
-            AI-Driven Belief Archaeology
-          </motion.div>
+      <section suppressHydrationWarning className="relative w-full pt-44 pb-24 overflow-hidden">
+        {/* Background container with a gradient mask to fade it seamlessly top and bottom */}
+        <div 
+          className="absolute inset-x-0 top-24 bottom-0 z-0 pointer-events-none"
+          style={{ 
+            maskImage: 'linear-gradient(to bottom, transparent 0%, black 20%, black 60%, transparent 100%)', 
+            WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, black 20%, black 60%, transparent 100%)' 
+          }}
+        >
+          {/* Solid black base requested by user specs */}
+          <div className="absolute inset-0 bg-[#000000]" />
+          
+          <video
+            src="/hero-bg.mov"
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="absolute inset-0 w-full h-full object-cover object-center opacity-90"
+          />
+          {/* Smooth fades to blend the video seamlessly into the black base */}
+          <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black via-black/40 to-transparent" />
+          <div className="absolute inset-x-0 top-0 h-1/3 bg-gradient-to-b from-black via-black/40 to-transparent" />
+          <div className="absolute inset-y-0 left-0 w-1/3 bg-gradient-to-r from-black via-black/40 to-transparent" />
+          <div className="absolute inset-y-0 right-0 w-1/3 bg-gradient-to-l from-black via-black/40 to-transparent" />
+        </div>
+
+
+        <div suppressHydrationWarning className="relative z-[2] max-w-5xl mx-auto px-6 text-center">
 
           <motion.h1 
             initial={{ opacity: 0, y: 20 }}
