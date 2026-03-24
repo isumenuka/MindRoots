@@ -29,19 +29,29 @@ export default function HistoryPage() {
   const [user,       setUser]       = useState(null)
   const [sessions,   setSessions]   = useState([])
   const [loading,    setLoading]    = useState(true)
+  const [fetchError, setFetchError] = useState(false)
   const [signingOut, setSigningOut] = useState(false)
-  const [deletingId, setDeletingId] = useState(null)   // session id being deleted
-  const [confirmId,  setConfirmId]  = useState(null)   // session id awaiting confirm
+  const [deletingId, setDeletingId] = useState(null)
+  const [confirmId,  setConfirmId]  = useState(null)
+
+  const loadSessions = async (u) => {
+    setLoading(true)
+    setFetchError(false)
+    try {
+      const ses = await getSessions(u.uid)
+      setSessions(ses)
+    } catch (e) {
+      console.error('[History] Failed to load sessions:', e)
+      setFetchError(true)
+    }
+    setLoading(false)
+  }
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
       if (!u) { router.push('/'); return }
       setUser(u)
-      try {
-        const ses = await getSessions(u.uid)
-        setSessions(ses)
-      } catch (e) { console.error(e) }
-      setLoading(false)
+      loadSessions(u)
     })
     return () => unsub()
   }, [router])
@@ -112,8 +122,23 @@ export default function HistoryPage() {
             </button>
           </div>
 
+          {/* Load error */}
+          {fetchError && (
+            <div className="flex flex-col items-center justify-center py-20 gap-4">
+              <span className="material-symbols-outlined text-[48px] text-red-400">cloud_off</span>
+              <p className="text-slate-400 text-base">Couldn&apos;t load your sessions.</p>
+              <button
+                onClick={() => user && loadSessions(user)}
+                className="flex items-center gap-2 px-5 py-2.5 bg-[#818CF8] text-white rounded-xl font-bold text-sm hover:bg-[#818CF8]/90 transition-colors"
+              >
+                <span className="material-symbols-outlined text-[18px]">refresh</span>
+                Retry
+              </button>
+            </div>
+          )}
+
           {/* Sentiment Analytics Dashboard */}
-          {!loading && sessions.length > 0 && (
+          {!loading && !fetchError && sessions.length > 0 && (
             <div className="mb-12 glass-card rounded-3xl p-6 md:p-8 flex flex-col lg:flex-row gap-8 items-start lg:items-center">
               <div className="flex-1 w-full">
                 <h2 className="text-xl font-display font-bold text-white mb-2 flex items-center gap-2">

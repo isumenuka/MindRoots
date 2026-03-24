@@ -5,6 +5,7 @@ import { auth, onAuthStateChanged } from '@/services/FirebaseService'
 import Link from 'next/link'
 import useFirestoreListener from '@/hooks/useFirestoreListener'
 import AppLogo from '@/components/AppLogo'
+import { audioManager } from '@/utils/audioManager'
 
 /* ─── Stage config ──────────────────────────────────────────────────────────── */
 const STAGES = [
@@ -103,6 +104,7 @@ function ProcessingContent() {
   // Auto-navigate on complete
   useEffect(() => {
     if (session?.status === 'complete' && sessionId && uid) {
+      audioManager.play('processing-complete.mp3', 0.6)
       setTimeout(() => router.push(`/session/${sessionId}?uid=${uid}`), 2000)
     }
   }, [session?.status, sessionId, uid, router])
@@ -131,7 +133,7 @@ function ProcessingContent() {
   }, [status])
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A] flex flex-col relative overflow-hidden font-inter">
+    <div className="h-screen overflow-hidden bg-[#0A0A0A] flex flex-col relative font-inter">
 
       {/* Ambient glows — same as landing page */}
       <div className="fixed inset-0 hero-gradient -z-10 pointer-events-none" />
@@ -162,11 +164,11 @@ function ProcessingContent() {
       </nav>
 
       {/* Content */}
-      <main className="flex-1 flex flex-col items-center justify-center px-6 pt-28 pb-12">
+      <main className="flex-1 flex flex-col items-center justify-center px-6 pt-16 overflow-hidden">
         <div className="w-full max-w-2xl">
 
           {/* Badge */}
-          <div className="flex justify-center mb-8">
+          <div className="flex justify-center mb-4">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#818CF8]/10 border border-[#818CF8]/20 text-[#818CF8] text-[10px] font-bold uppercase tracking-widest">
               <span className="material-symbols-outlined text-sm">cognition</span>
               AI Processing In Progress
@@ -174,21 +176,21 @@ function ProcessingContent() {
           </div>
 
           {/* Heading */}
-          <div className="text-center mb-14">
-            <h1 className="text-4xl md:text-5xl font-display font-bold text-white mb-4 leading-tight">
+          <div className="text-center mb-5">
+            <h1 className="text-3xl md:text-4xl font-display font-bold text-white mb-2 leading-tight">
               Excavating your{' '}
               <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#818CF8] to-[#a78bfa] italic font-bold">
                 inner world
               </span>
             </h1>
-            <p className="text-slate-400 text-base md:text-lg max-w-md mx-auto leading-relaxed">
+            <p className="text-slate-400 text-sm md:text-base max-w-md mx-auto leading-relaxed">
               Our AI agents are weaving your belief archaeology.
               This may take a moment.
             </p>
           </div>
 
           {/* Stage cards */}
-          <div className="glass-card rounded-2xl border border-white/10 p-6 md:p-8 mb-8 space-y-0">
+          <div className="glass-card rounded-2xl border border-white/10 p-4 mb-3 space-y-0">
             {STAGES.map((stage, i) => {
               const state = stageState(i, currentStatusIdx)
               const isDone = state === 'done'
@@ -197,7 +199,7 @@ function ProcessingContent() {
               return (
                 <div
                   key={i}
-                  className={`flex items-center gap-4 ${i < STAGES.length - 1 ? 'pb-6 mb-6 border-b border-white/5' : ''} transition-all duration-500`}
+                  className={`flex items-center gap-3 ${i < STAGES.length - 1 ? 'pb-3 mb-3 border-b border-white/5' : ''} transition-all duration-500`}
                 >
                   {/* Icon bubble */}
                   <div className={`shrink-0 w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-500 ${
@@ -250,7 +252,7 @@ function ProcessingContent() {
           </div>
 
           {/* Progress footer */}
-          <div className="glass-card rounded-2xl border border-white/10 p-6">
+          <div className="glass-card rounded-2xl border border-white/10 p-4">
             <div className="flex justify-between items-center mb-3">
               <div>
                 <p className="text-[10px] uppercase tracking-[0.2em] text-[#818CF8] font-bold mb-0.5">Status</p>
@@ -326,7 +328,7 @@ function ProcessingContent() {
 export default function ProcessingPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-[#0A0A0A] flex items-center justify-center">
+      <div className="h-screen bg-[#0A0A0A] flex items-center justify-center">
         <div className="w-10 h-10 border-4 border-[#818CF8]/20 border-t-[#818CF8] rounded-full animate-spin" />
       </div>
     }>

@@ -37,6 +37,7 @@ export default function LandingPage() {
   const [signingIn, setSigningIn] = useState(false)
   const [error, setError] = useState(null)
   const [youtubeVideoUrl, setYoutubeVideoUrl] = useState('https://www.youtube.com/embed/ZvtMh5gN3YI?rel=0')
+  const [heroVideoSrc, setHeroVideoSrc] = useState(null)
 
   useEffect(() => {
     // Just sync auth state, no forced redirects
@@ -60,6 +61,15 @@ export default function LandingPage() {
       }
     }
     fetchConfig()
+
+    // Fetch hero video as blob to prevent IDM from intercepting it
+    fetch('/hero-bg.mov')
+      .then(res => res.blob())
+      .then(blob => {
+        const url = URL.createObjectURL(blob)
+        setHeroVideoSrc(url)
+      })
+      .catch(err => console.error('Failed to load hero video:', err))
 
     return () => unsub()
   }, [setUser])
@@ -166,14 +176,19 @@ export default function LandingPage() {
           {/* Solid black base requested by user specs */}
           <div className="absolute inset-0 bg-[#000000]" />
           
-          <video
-            src="/hero-bg.mov"
-            autoPlay
-            loop
-            muted
-            playsInline
-            className="absolute inset-0 w-full h-full object-cover object-center opacity-90"
-          />
+          {heroVideoSrc && (
+            <video
+              src={heroVideoSrc}
+              autoPlay
+              loop
+              muted
+              playsInline
+              controlsList="nodownload"
+              disablePictureInPicture
+              onContextMenu={(e) => e.preventDefault()}
+              className="absolute inset-0 w-full h-full object-cover object-center opacity-90 pointer-events-none"
+            />
+          )}
           {/* Smooth fades to blend the video seamlessly into the black base */}
           <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black via-black/40 to-transparent" />
           <div className="absolute inset-x-0 top-0 h-1/3 bg-gradient-to-b from-black via-black/40 to-transparent" />

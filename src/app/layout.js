@@ -1,5 +1,7 @@
 import './globals.css'
 import PageTransition from '@/components/PageTransition'
+import OfflineBanner from '@/components/OfflineBanner'
+import ErrorBoundary from '@/components/ErrorBoundary'
 
 export const metadata = {
   title: 'MindRoots — AI Belief Archaeology',
@@ -27,9 +29,12 @@ export default function RootLayout({ children }) {
         />
       </head>
       <body className="bg-[#0A0A0A] text-slate-300 min-h-screen" suppressHydrationWarning>
-        <PageTransition>
-          {children}
-        </PageTransition>
+        <OfflineBanner />
+        <ErrorBoundary>
+          <PageTransition>
+            {children}
+          </PageTransition>
+        </ErrorBoundary>
       </body>
     </html>
   )

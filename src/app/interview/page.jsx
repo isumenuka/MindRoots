@@ -12,6 +12,8 @@ import useAppStore from '@/store/useAppStore'
 import { sanitizeBeliefNode } from '@/utils/sanitize'
 import AppLogo from '@/components/AppLogo'
 import { getNodeDisplayInfo } from '@/utils/nodeTypes'
+import { useSessionRecovery } from '@/hooks/useSessionRecovery'
+import SessionRecoveryModal from '@/components/SessionRecoveryModal'
 
 const MAX_BELIEFS = 5
 
@@ -21,23 +23,32 @@ export default function InterviewPage() {
 
   const [user, setLocalUser] = useState(null)
   const [sessionId, setLocalSessionId] = useState(null)
-  const [agentStatus, setAgentStatus] = useState('connecting') // connecting | active | speaking | listening | ending
+  const [agentStatus, setAgentStatus] = useState('connecting')
   const [showEndConfirm, setShowEndConfirm] = useState(false)
   const [showTranscript, setShowTranscript] = useState(true)
   const [showTextInput, setShowTextInput] = useState(false)
   const [textInput, setTextInput] = useState('')
   const [micError, setMicError] = useState(null)
-  const [connectionError, setConnectionError] = useState(null) // null | 'session_failed' | 'timeout' | string
+  const [micDisconnected, setMicDisconnected] = useState(false)
+  const [connectionError, setConnectionError] = useState(null)
+  const [reconnecting, setReconnecting] = useState(false)
+  const [reconnectAttempts, setReconnectAttempts] = useState(0)
   const [showGlow, setShowGlow] = useState(false)
+  const [showRecoveryModal, setShowRecoveryModal] = useState(false)
   const [transcriptScrollRef] = useState(() => ({ current: null }))
   const connectionTimerRef = useRef(null)
   const textInputRef = useRef(null)
   const prevBeliefCount = useRef(0)
+  const pendingSavesRef = useRef([]) // Firebase save queue for offline scenarios
+  const autoSaveIntervalRef = useRef(null)
+  const sessionActiveRef = useRef(false) // true while interview is live
 
   const liveServiceRef = useRef(null)
   const sessionCreatedRef = useRef(false)
 
-  const { isCapturing, hasPermission, error: micErr, start: startMic, stop: stopMic, getAnalyser: getMicAnalyser } = useMicrophone()
+  const { saveDraft, clearDraft, hasDraft, draftData } = useSessionRecovery()
+
+  const { isCapturing, hasPermission, error: micErr, start: startMic, stop: stopMic, getAnalyser: getMicAnalyser, streamRef } = useMicrophone()
   const { init: initAudioPlayer, playChunk, stopPlayback, stop: stopPlayer, getAnalyser: getPlayerAnalyser } = useAudioPlayer()
 
   // Auth guard
@@ -49,6 +60,36 @@ export default function InterviewPage() {
     })
     return () => unsub()
   }, [router, setUser])
+
+  // Show recovery modal if draft exists (only once on mount)
+  useEffect(() => {
+    if (hasDraft) setShowRecoveryModal(true)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Beforeunload guard — warn user before closing tab mid-session
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (!sessionActiveRef.current) return
+      e.preventDefault()
+      e.returnValue = 'Your session is in progress. Are you sure you want to leave? Your progress has been saved.'
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [])
+
+  // Retry pending Firebase saves when back online
+  useEffect(() => {
+    const flushQueue = async () => {
+      if (pendingSavesRef.current.length === 0) return
+      const queue = [...pendingSavesRef.current]
+      pendingSavesRef.current = []
+      for (const item of queue) {
+        try { await saveBelief(item.uid, item.sessionId, item.belief) } catch {}
+      }
+    }
+    window.addEventListener('online', flushQueue)
+    return () => window.removeEventListener('online', flushQueue)
+  }, [])
 
   // Initialize interview session
   useEffect(() => {
@@ -143,8 +184,19 @@ export default function InterviewPage() {
       svc.onBeliefFound = async (rawNode) => {
         const node = sanitizeBeliefNode(rawNode)
         addBelief(node)
-        // Save to Firestore
-        await saveBelief(user.uid, sid, { ...node, order_index: beliefs.length })
+        
+        // Play the insight discovery sound via centralized manager
+        audioManager.play('insight-found.mp3', 0.6)
+
+        // Save to Firestore — queue if offline
+        try {
+          await saveBelief(user.uid, sid, { ...node, order_index: beliefs.length })
+        } catch (err) {
+          console.warn('[Interview] saveBelief failed, queuing:', err)
+          pendingSavesRef.current.push({ uid: user.uid, sessionId: sid, belief: { ...node, order_index: beliefs.length } })
+        }
+        // Auto-save draft immediately on each new belief
+        saveDraft({ beliefs: useAppStore.getState().beliefs, transcript: useAppStore.getState().transcript, sessionId: sid })
       }
 
       svc.onComplete = async () => {
@@ -168,26 +220,74 @@ export default function InterviewPage() {
         setConnectionError(typeof e === 'string' ? e : e?.message || 'Connection lost')
       }
 
+      // Gemini unexpected disconnect — auto-reconnect (max 3 attempts)
+      svc.onUnexpectedClose = async () => {
+        if (!sessionActiveRef.current) return
+        const attempts = reconnectAttempts
+        if (attempts >= 3) {
+          setConnectionError('Connection lost after multiple retries.')
+          return
+        }
+        setReconnecting(true)
+        setReconnectAttempts(a => a + 1)
+        try {
+          await new Promise(r => setTimeout(r, 2000))
+          await liveServiceRef.current?.reconnect?.()
+          setReconnecting(false)
+        } catch {
+          setReconnecting(false)
+          setConnectionError('Reconnection failed. Please retry.')
+        }
+      }
+
       try {
         await svc.startSession()
         if (cancelled) { svc.endSession(); liveServiceRef.current = null; return }
-        clearTimeout(connectionTimerRef.current)  // Connected — cancel timeout
+        clearTimeout(connectionTimerRef.current)
         liveServiceRef.current = svc
+        sessionActiveRef.current = true
         setAgentStatus('active')
+        
+        // Play the intro session swelling sound
+        audioManager.play('session-enter.mp3', 0.5)
 
-        // Prompt the agent to start with its opening greeting immediately
         await svc.triggerAgentStart()
 
-        // Start capturing mic and sending audio
+        // Start mic and watch for physical disconnect
         await startMic(
           (pcm16) => svc?.sendAudio?.(pcm16),
-          () => svc?.sendAudioStreamEnd?.()  // flush Gemini VAD on mic stop
+          () => svc?.sendAudioStreamEnd?.()
         )
+
+        // Monitor mic track for physical disconnect (e.g. headset unplugged)
+        const tryWatchMicTrack = () => {
+          try {
+            // Access the stream through the microphone hook's internal ref if available
+            const stream = window.__mindroots_mic_stream
+            if (stream) {
+              const track = stream.getAudioTracks()[0]
+              if (track) {
+                track.onended = () => {
+                  setMicDisconnected(true)
+                  setMicError('Microphone disconnected. Reconnect and retry.')
+                }
+              }
+            }
+          } catch {}
+        }
+        setTimeout(tryWatchMicTrack, 1000)
+
+        // Auto-save draft every 30 seconds
+        autoSaveIntervalRef.current = setInterval(() => {
+          const state = useAppStore.getState()
+          saveDraft({ beliefs: state.beliefs, transcript: state.transcript, sessionId: sid })
+        }, 30000)
+
       } catch (err) {
         console.error('[Interview] Failed to start:', err)
         setMicError(err.message)
-        setAgentStatus('active') // Still show UI
-        setShowTextInput(true) // Auto-open the text input for the user to type
+        setAgentStatus('active')
+        setShowTextInput(true)
       }
     }
 
@@ -198,12 +298,15 @@ export default function InterviewPage() {
       cancelled = true
       sessionCreatedRef.current = false
       clearTimeout(connectionTimerRef.current)
+      clearInterval(autoSaveIntervalRef.current)
     }
   }, [user])
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
+      sessionActiveRef.current = false
+      clearInterval(autoSaveIntervalRef.current)
       stopMic()
       stopPlayer()
       liveServiceRef.current?.endSession()
@@ -240,7 +343,7 @@ export default function InterviewPage() {
     if (!msg) return
     setTextInput('')
     // Actually send to Gemini Live (was missing before!)
-    liveServiceRef.current?.sendText(msg)
+    liveServiceRef.current?.sendText?.(msg)
     // Show the conversation panel automatically so user sees their message
     setShowTranscript(true)
   }
@@ -248,6 +351,9 @@ export default function InterviewPage() {
   const handleEndSession = async () => {
     setShowEndConfirm(false)
     setAgentStatus('ending')
+    sessionActiveRef.current = false
+    clearInterval(autoSaveIntervalRef.current)
+    clearDraft() // Clean exit — remove saved draft
     await stopMic()
     await liveServiceRef.current?.endSession()
     if (sessionId && user) {
@@ -282,14 +388,58 @@ export default function InterviewPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A] text-white flex flex-col font-inter">
+    <>
+    {/* Session Recovery Modal — shown if a previous session was interrupted */}
+    {showRecoveryModal && (
+      <SessionRecoveryModal
+        draftData={draftData}
+        onResume={() => {
+          // Restore beliefs and transcript from draft
+          if (draftData?.beliefs) draftData.beliefs.forEach(b => addBelief(b))
+          if (draftData?.transcript) draftData.transcript.forEach(t => addTranscriptEntry(t))
+          setShowRecoveryModal(false)
+        }}
+        onDiscard={() => {
+          clearDraft()
+          setShowRecoveryModal(false)
+        }}
+      />
+    )}
+
+    <div className="h-screen overflow-hidden bg-[#0A0A0A] text-white flex flex-col font-inter">
       {/* Background glow */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-accent/10 rounded-full blur-[120px]"></div>
       </div>
 
+      {/* Reconnecting banner */}
+      <AnimatePresence>
+        {reconnecting && (
+          <motion.div initial={{ y: -40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -40, opacity: 0 }}
+            className="fixed top-0 left-0 right-0 z-[150] flex items-center justify-center gap-2 py-2.5 bg-amber-500/90 text-amber-950 text-sm font-semibold">
+            <span className="material-symbols-outlined text-[18px] animate-spin">sync</span>
+            Reconnecting to your guide…
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Mic disconnected banner */}
+      <AnimatePresence>
+        {micDisconnected && (
+          <motion.div initial={{ y: -40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -40, opacity: 0 }}
+            className="fixed top-0 left-0 right-0 z-[150] flex items-center justify-center gap-2 py-2.5 bg-red-500/90 text-white text-sm font-semibold">
+            <span className="material-symbols-outlined text-[18px]">mic_off</span>
+            Microphone disconnected — reconnect and click Retry
+            <button onClick={() => { setMicDisconnected(false); setMicError(null); window.location.reload() }}
+              className="ml-3 px-3 py-1 bg-white/20 rounded-full text-xs font-bold hover:bg-white/30 transition-colors">
+              Retry
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Header */}
-      <header className="relative z-10 flex items-center justify-between px-6 py-4 lg:px-12 border-b border-white/5">
+      <header className="fixed top-0 left-0 right-0 z-40 flex items-center justify-between px-6 py-4 lg:px-12 border-b border-white/5 bg-[#0A0A0A]/80 backdrop-blur-md">
         <AppLogo />
 
         <div className="flex items-center gap-6">
@@ -317,38 +467,52 @@ export default function InterviewPage() {
         </div>
       </header>
 
-      {/* Floating Extracted Beliefs Ticker */}
-      <div className="hidden sm:flex fixed right-6 top-28 bottom-28 z-40 flex-col gap-2.5 w-auto items-end pointer-events-none overflow-hidden p-2 justify-start">
-        <AnimatePresence>
-          {beliefs.map((b, i) => {
-            const info = getNodeDisplayInfo(b)
-            return (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, x: 50, scale: 0.95 }}
-                animate={{ opacity: 1, x: 0, scale: 1 }}
-                transition={{ type: 'spring', damping: 20, stiffness: 150 }}
-                style={{
-                  borderColor: `${info.color}66`, // 40% opacity
-                  boxShadow: `0 0 30px -5px ${info.color}33`, // 20% glow
-                  color: info.color
-                }}
-                className="bg-[#1A1A1F]/80 backdrop-blur-2xl border px-3.5 py-2 rounded-full flex items-center gap-2.5 relative overflow-hidden group shadow-2xl"
-              >
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-                <span className="material-symbols-outlined text-[16px] relative z-10" style={{ fontVariationSettings: "'FILL' 1" }}>{info.icon}</span>
-                <span className="text-[9px] font-bold uppercase tracking-[0.1em] whitespace-nowrap relative z-10">{info.title}</span>
-              </motion.div>
-            )
-          })}
-        </AnimatePresence>
-      </div>
+      {/* Belief type tags bar — below header, grouped by type */}
+      <AnimatePresence>
+        {beliefs.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="relative z-30 flex flex-wrap gap-2 px-6 pt-3 pb-1 justify-center"
+            style={{ marginTop: '72px' }}
+          >
+            {(() => {
+              const seen = {}
+              beliefs.forEach(b => {
+                const type = b.node_type || 'BELIEF_NODE'
+                if (!seen[type]) seen[type] = { belief: b, count: 0 }
+                seen[type].count++
+              })
+              return Object.entries(seen).map(([type, { belief: b, count }]) => {
+                const info = getNodeDisplayInfo(b)
+                return (
+                  <motion.div
+                    key={type}
+                    initial={{ opacity: 0, scale: 0.85 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.85 }}
+                    transition={{ type: 'spring', damping: 20, stiffness: 200 }}
+                    style={{ borderColor: info.color, color: info.color, background: `${info.color}12`, boxShadow: `0 0 14px -4px ${info.color}44` }}
+                    className="border px-3 py-1 rounded-full flex items-center gap-1.5 backdrop-blur-xl"
+                  >
+                    <span className="material-symbols-outlined text-[13px]" style={{ fontVariationSettings: "'FILL' 1" }}>{info.icon}</span>
+                    <span className="text-[8px] font-bold uppercase tracking-[0.1em] whitespace-nowrap">{info.title}</span>
+                    {count > 1 && (
+                      <span className="text-[7px] font-black px-1 py-0.5 rounded-full" style={{ background: `${info.color}30` }}>× {count}</span>
+                    )}
+                  </motion.div>
+                )
+              })
+            })()}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {/* Main */}
-      <main className="relative z-10 flex-1 flex flex-col items-center justify-center px-6">
-        <div className="flex flex-col items-center gap-8 w-full">
+      {/* Main — waveform + status, takes remaining space */}
+      <main className="relative z-10 flex-1 flex flex-col items-center justify-center px-6 min-h-0">
+        <div className="flex flex-col items-center gap-5 w-full">
           {/* Waveform */}
-          <div className="flex items-end justify-center gap-1.5 h-32 sm:h-48 w-full max-w-2xl text-accent">
+          <div className="flex items-end justify-center gap-1.5 h-28 sm:h-36 w-full max-w-2xl text-accent">
             <WaveformVisualizer
               analyser={currentAnalyser}
               isActive={isCapturing || agentStatus === 'speaking'}
@@ -364,29 +528,30 @@ export default function InterviewPage() {
                 Microphone unavailable — type your responses below
               </p>
             )}
-            <p className="font-display text-2xl md:text-3xl font-medium text-white max-w-2xl leading-relaxed">
+            <p className="font-display text-xl md:text-2xl font-medium text-white max-w-2xl leading-relaxed">
               {statusLabels[agentStatus] || 'Ready'}
             </p>
-            <p className="text-slate-400 mt-2 text-sm">
+            <p className="text-slate-400 mt-1 text-sm">
               {agentStatus === 'connecting' ? 'Establishing secure session...' : 'MindRoots is analyzing the patterns in your narrative.'}
             </p>
           </div>
         </div>
       </main>
 
-      {/* Conversation Panel — toggleable */}
+      {/* Conversation Panel — toggleable, no page scroll — only this panel scrolls */}
       <AnimatePresence>
         {showTranscript && (
           <motion.section
-            initial={{ opacity: 0, y: 24 }}
+            initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 24 }}
-            transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
-            className="relative z-10 px-6 lg:px-8 max-w-3xl mx-auto w-full mb-4"
+            exit={{ opacity: 0, y: 16 }}
+            transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
+            className="relative z-10 px-4 lg:px-8 max-w-3xl mx-auto w-full mb-2"
+            style={{ maxHeight: '28vh' }}
           >
             <div
               ref={(el) => { transcriptScrollRef.current = el }}
-              className="bg-white/[0.06] backdrop-blur-xl border border-white/10 rounded-2xl p-5 max-h-[260px] overflow-y-auto flex flex-col gap-5"
+              className="bg-white/[0.06] backdrop-blur-xl border border-white/10 rounded-2xl p-4 h-full overflow-y-auto flex flex-col gap-4"
             >
               {transcript.length === 0 ? (
                 <p className="text-slate-500 text-sm italic text-center py-4">Conversation will appear here...</p>
@@ -444,17 +609,23 @@ export default function InterviewPage() {
         )}
       </AnimatePresence>
 
-      {/* Footer mic controls */}
-      <footer className="relative z-10 flex flex-col items-center gap-4 pb-6 sm:pb-10 px-6">
+      {/* Footer mic controls — pinned at bottom, compact */}
+      <footer className="relative z-10 flex flex-col items-center gap-3 pb-4 sm:pb-6 px-6">
         <div className="flex gap-3 items-center">
           {/* Mic */}
           <button
-            onClick={() => isCapturing
-              ? stopMic()
-              : startMic(
+            onClick={() => {
+              if (isCapturing) {
+                audioManager.play('mic-off.mp3', 0.4)
+                stopMic()
+              } else {
+                audioManager.play('mic-on.mp3', 0.4)
+                startMic(
                   (pcm16) => liveServiceRef.current?.sendAudio?.(pcm16),
                   () => liveServiceRef.current?.sendAudioStreamEnd?.()
-                )}
+                )
+              }
+            }}
             className={`size-14 rounded-full flex items-center justify-center hover:scale-105 transition-transform ${
               isCapturing ? 'bg-white text-[#0A0A0A]' : 'bg-white/5 border border-white/10 text-white hover:bg-white/10'
             }`}
@@ -615,5 +786,6 @@ export default function InterviewPage() {
         </div>
       )}
     </div>
+  </>
   )
 }

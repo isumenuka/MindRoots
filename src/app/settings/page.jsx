@@ -3,6 +3,7 @@ import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { auth, onAuthStateChanged, signOut, deleteAllUserData, getUserDoc, updateUserVoice, updateUserGeminiKey } from '@/services/FirebaseService'
 import useAppStore from '@/store/useAppStore'
+import { useAudioSettingsStore } from '@/utils/audioManager'
 import AppSidebar from '@/components/AppSidebar'
 
 const VOICES = [
@@ -20,6 +21,8 @@ function SettingsInner() {
   const router       = useRouter()
   const searchParams = useSearchParams()
   const storeSetUser = useAppStore(s => s.setUser)
+  const uiSoundsEnabled = useAudioSettingsStore(s => s.uiSoundsEnabled)
+  const setUiSoundsEnabled = useAudioSettingsStore(s => s.setUiSoundsEnabled)
 
   const [user,          setUser]          = useState(null)
   const [userDoc,       setUserDoc]       = useState(null)
@@ -30,10 +33,12 @@ function SettingsInner() {
   const [selectedVoice, setSelectedVoice] = useState('Puck')
   const [savingVoice,   setSavingVoice]   = useState(false)
   const [voiceSaved,    setVoiceSaved]    = useState(false)
+  const [voiceError,    setVoiceError]    = useState(false)
   const [geminiKey,     setGeminiKey]     = useState('')
   const [showKey,       setShowKey]       = useState(false)
   const [savingKey,     setSavingKey]     = useState(false)
   const [keySaved,      setKeySaved]      = useState(false)
+  const [keyError,      setKeyError]      = useState(false)
   const [hasKey,        setHasKey]        = useState(false)
 
   useEffect(() => {
@@ -90,6 +95,8 @@ function SettingsInner() {
       setTimeout(() => setVoiceSaved(false), 2500)
     } catch (e) {
       console.error(e)
+      setVoiceError(true)
+      setTimeout(() => setVoiceError(false), 4000)
     }
     setSavingVoice(false)
   }
@@ -105,6 +112,8 @@ function SettingsInner() {
       setTimeout(() => setKeySaved(false), 3000)
     } catch (e) {
       console.error(e)
+      setKeyError(true)
+      setTimeout(() => setKeyError(false), 4000)
     }
     setSavingKey(false)
   }
@@ -245,6 +254,12 @@ function SettingsInner() {
                     API key saved securely!
                   </div>
                 )}
+                {keyError && (
+                  <div className="flex items-center gap-1.5 mt-3 text-red-400 text-sm font-semibold animate-in fade-in duration-200">
+                    <span className="material-symbols-outlined text-[18px]">error</span>
+                    Failed to save key. Check your connection and retry.
+                  </div>
+                )}
 
                 <p className="mt-3 text-xs text-slate-600 leading-relaxed">
                   Your key is stored in your private Firestore account — never shared or logged.
@@ -321,11 +336,40 @@ function SettingsInner() {
                       Voice preference saved!
                     </div>
                   )}
+                  {voiceError && (
+                    <div className="flex items-center gap-1.5 text-red-400 text-sm font-semibold animate-in fade-in duration-200">
+                      <span className="material-symbols-outlined text-[18px]">error</span>
+                      Failed to save voice. Check your connection.
+                    </div>
+                  )}
                 </div>
 
                 <p className="mt-4 text-xs text-slate-600 leading-relaxed">
                   Voice selection applies to your next session. The backend uses your preference when connecting to Gemini Live.
                 </p>
+              </div>
+
+              {/* ── UI Sounds ── */}
+              <div className="pt-2">
+                <div className="flex items-center gap-3 mb-2">
+                  <span className="material-symbols-outlined text-[#818CF8] text-[20px]">volume_up</span>
+                  <h2 className="font-display text-lg font-bold text-white">Interface Audio</h2>
+                </div>
+                <p className="text-slate-500 text-sm mb-6 leading-relaxed">
+                  Enable or disable subtle atmospheric sounds, clicks, and chimes during your sessions. This does not affect the AI therapist's voice.
+                </p>
+                <div className="p-6 border border-white/10 rounded-xl bg-white/[0.02] flex items-center justify-between">
+                  <div>
+                    <h4 className="font-display text-slate-100 font-semibold mb-1">UI Sounds</h4>
+                    <p className="text-xs text-slate-500 max-w-sm">Play subtle interface sounds during navigation and sessions.</p>
+                  </div>
+                  <button 
+                    onClick={() => setUiSoundsEnabled(!uiSoundsEnabled)}
+                    className={`relative w-12 h-6 rounded-full transition-colors flex items-center ${uiSoundsEnabled ? 'bg-[#818CF8]/80' : 'bg-white/10'}`}
+                  >
+                    <div className={`w-5 h-5 bg-white rounded-full absolute shadow-sm transition-transform ${uiSoundsEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                  </button>
+                </div>
               </div>
 
               {/* Danger Zone */}

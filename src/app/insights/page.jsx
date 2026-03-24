@@ -66,23 +66,31 @@ export default function InsightsPage() {
 
   const [user,     setUser]     = useState(null)
   const [loading,  setLoading]  = useState(true)
+  const [fetchError, setFetchError] = useState(false)
   const [sessions, setSessions] = useState([])
-  const [beliefs,  setBeliefs]  = useState([])  // flat array across ALL sessions
+  const [beliefs,  setBeliefs]  = useState([])
   const [signingOut, setSigningOut] = useState(false)
+
+  const loadData = async (u) => {
+    setLoading(true)
+    setFetchError(false)
+    try {
+      const ses = await getSessions(u.uid)
+      setSessions(ses)
+      const allBeliefs = await Promise.all(ses.map(s => getBeliefs(u.uid, s.id)))
+      setBeliefs(allBeliefs.flat())
+    } catch (e) {
+      console.error('[Insights] Failed to load data:', e)
+      setFetchError(true)
+    }
+    setLoading(false)
+  }
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
       if (!u) { router.push('/'); return }
       setUser(u)
-      try {
-        // Load sessions
-        const ses = await getSessions(u.uid)
-        setSessions(ses)
-        // Load beliefs for every session in parallel
-        const allBeliefs = await Promise.all(ses.map(s => getBeliefs(u.uid, s.id)))
-        setBeliefs(allBeliefs.flat())
-      } catch (e) { console.error(e) }
-      setLoading(false)
+      loadData(u)
     })
     return () => unsub()
   }, [router])
@@ -171,6 +179,16 @@ export default function InsightsPage() {
             <div className="flex flex-col items-center justify-center py-24">
               <div className="w-8 h-8 border-2 border-[#818CF8] border-t-transparent rounded-full animate-spin mb-4" />
               <p className="text-slate-500 text-sm uppercase tracking-widest font-semibold">Analysing your mind…</p>
+            </div>
+          ) : fetchError ? (
+            <div className="flex flex-col items-center justify-center py-24 gap-4">
+              <span className="material-symbols-outlined text-[48px] text-red-400">cloud_off</span>
+              <p className="text-slate-400 text-base">Couldn&apos;t load your insights.</p>
+              <button onClick={() => user && loadData(user)}
+                className="flex items-center gap-2 px-5 py-2.5 bg-[#818CF8] text-white rounded-xl font-bold text-sm hover:bg-[#818CF8]/90 transition-colors">
+                <span className="material-symbols-outlined text-[18px]">refresh</span>
+                Retry
+              </button>
             </div>
           ) : totalSessions === 0 ? (
             <div className="flex flex-col items-center justify-center py-24 text-center">

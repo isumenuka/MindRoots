@@ -22,9 +22,11 @@ class GeminiLiveService {
     this.onError = null           // cb(error)
     this.onInterruption = null    // cb()
     this.onTurnComplete = null    // cb()
+    this.onUnexpectedClose = null // cb() — fires when WS closes without user ending session
     this._outputTranscriptBuffer = '' // accumulate streaming agent words
     this._inputTranscriptBuffer  = '' // accumulate streaming user words
     this._transcriptBubbleStarted = false // tracks if agent bubble has been created this turn
+    this._userEnded = false // flag set when user intentionally ends session
   }
 
   // Store the user's API key to forward to the backend for token generation
@@ -162,6 +164,10 @@ class GeminiLiveService {
         ws.onclose = () => {
           console.log('[GeminiLive] Connection closed')
           this.isConnected = false
+          // Fire unexpected close only if the user didn't end the session intentionally
+          if (!this._userEnded) {
+            this.onUnexpectedClose?.()
+          }
         }
 
       } catch (err) {
@@ -245,7 +251,12 @@ class GeminiLiveService {
       .replace(/json\s*\{[\s\S]*/gi, '')
       // Legacy colon format: BELIEF_NODE: {...}
       .replace(/(BELIEF|BLOCKER|CRITIC_PERSONA|COPING_STRATEGY|VALUE|STRENGTH|RELATIONSHIP_PATTERN|FUTURE_VISION|TRIGGER|ACTION_STEP|SESSION_METRIC)_NODE:\s*\{[\s\S]*?\}/g, '')
+      // Raw inline JSON belief node — flat object with "id" field, emitted without any wrapper
+      .replace(/\{[^{}]*"id"\s*:[^{}]*\}/g, '')
+      // Catch-all: strip any remaining XML/HTML-like tags Gemini may emit (e.g. <break/>, <thinking>, </thinking>)
+      .replace(/<[^>]*>/g, '')
       .replace(/`/g, '')
+      .replace(/\s{2,}/g, ' ') // collapse extra spaces left after tag removal
       .replace(/\n{3,}/g, '\n\n')
   }
 
@@ -332,11 +343,26 @@ class GeminiLiveService {
   }
 
   async endSession() {
+    this._userEnded = true
     if (this.ws) {
       try { this.ws.close() } catch {}
       this.ws = null
       this.isConnected = false
     }
+  }
+
+  /**
+   * Reconnect — re-fetches an ephemeral token and re-opens the WebSocket.
+   * Preserves accumulated beliefNodes and fullTranscript.
+   */
+  async reconnect() {
+    this._userEnded = false
+    if (this.ws) {
+      try { this.ws.close() } catch {}
+      this.ws = null
+      this.isConnected = false
+    }
+    await this.startSession()
   }
 
   getBeliefNodes() { return this.beliefNodes }
