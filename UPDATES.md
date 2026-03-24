@@ -1,24 +1,30 @@
-# Latest Updates (MindRoots)
+# What's New in MindRoots
 
-Based on the last 2 commits to the repository, here are the detailed updates and features that have been recently implemented:
+## 🎵 Immersive Interface Audio
+MindRoots now plays subtle, atmospheric sounds during your sessions to make the experience feel alive and responsive.
 
-## 1. Web App Manifest & Favicon Integration 
-**Commit Date:** March 24, 2026
-**Commit Hash:** `e6b258eab79`
+- **Session Start Tone** — A soft introductory sound plays the moment your AI session begins.
+- **Microphone Feedback** — Distinct chimes play when you switch your mic on or off, so you always know your recording state.
+- **Insight Discovery Cue** — Every time the AI uncovers a core belief, coping strategy, or relational pattern in your narrative, a gentle notification sound is played.
+- **Processing Complete Sound** — A satisfying cue plays when the backend finishes building your Belief Origin Tree.
+- **Master Toggle** — A new **Interface Audio** toggle is available in **Settings**, so you can disable these sounds at any time without affecting the AI therapist's voice.
 
-### Changes Implemented:
-- **Full Favicon Suite Added:** Integrated a comprehensive set of app icons including `.ico`, `.svg`, and multiple `.png` web manifest sizes.
-- **Apple Touch Support:** Added `apple-touch-icon.png` to correctly support iOS home-screen additions.
-- **Root Metadata Overhaul:** Configured the global Next.js metadata inside `src/app/layout.js` to correctly link and render all provided favicon assets natively across various devices and browsers.
-- **Webmanifest Installed:** Hooked up `site.webmanifest` to ensure Progressive Web App (PWA) compatibility.
+---
 
-## 2. Core AI Interview Page & Sound Management
-**Commit Date:** March 24, 2026
-**Commit Hash:** `73db8257350`
+## 🎨 App Branding & Icons
+MindRoots now has a complete brand identity across all devices and platforms.
 
-### Changes Implemented:
-- **UI Sound Effects:** Hooked up interactive, non-voice sound effects for actions inside the AI interview page.
-- **Microphone Toggles:** Users now hear `mic-on.wav` and `mic-off.wav` when toggling their microphone state.
-- **Insight Discovery Cues:** Played a notification chime (`insight-found.mp3`) in the background whenever the AI discovers and maps a new belief or insight out of the conversation.
-- **Centralized Audio Handling:** All audio plays securely through a unified `audioManager` store, preventing sound overlaps and audio-stalling bugs.
-- **Interview Flow UI Updates:** Updated the visual ticker to display varied node tags extracted in real-time, matching the new audio infrastructure perfectly.
+- Full favicon suite installed — crisp icons appear correctly on every browser tab, bookmark bar, and device home screen.
+- iOS / Android home-screen add-to-home support with a proper Apple Touch icon.
+- PWA (Progressive Web App) manifest configured so the app installs correctly on mobile devices.
+
+---
+
+## 🧠 Belief Discovery Improvements
+The AI interviewing engine can now detect and surface a richer variety of psychological insights, not just core beliefs.
+
+- **Coping Strategies** — Behaviours you adopted to manage inner pain (shown in green).
+- **Relational Patterns** — Recurring dynamics in your relationships (shown in pink).
+- **Internal Blockers** — Thoughts or fears that hold you back (shown in orange/red).
+- **Protective Mechanisms** — Defence strategies your psyche built for safety (shown in teal).
+- Each insight type has its own unique icon and colour so you can see the full landscape of your inner world at a glance.
