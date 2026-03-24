@@ -11,6 +11,7 @@ import WaveformVisualizer from '@/components/WaveformVisualizer'
 import useAppStore from '@/store/useAppStore'
 import { sanitizeBeliefNode } from '@/utils/sanitize'
 import AppLogo from '@/components/AppLogo'
+import { audioManager } from '@/utils/audioManager'
 import { getNodeDisplayInfo } from '@/utils/nodeTypes'
 import { useSessionRecovery } from '@/hooks/useSessionRecovery'
 import SessionRecoveryModal from '@/components/SessionRecoveryModal'
@@ -616,10 +617,10 @@ export default function InterviewPage() {
           <button
             onClick={() => {
               if (isCapturing) {
-                audioManager.play('mic-off.mp3', 0.4)
+                audioManager.play('mic-off.wav', 0.4)
                 stopMic()
               } else {
-                audioManager.play('mic-on.mp3', 0.4)
+                audioManager.play('mic-on.wav', 0.4)
                 startMic(
                   (pcm16) => liveServiceRef.current?.sendAudio?.(pcm16),
                   () => liveServiceRef.current?.sendAudioStreamEnd?.()
