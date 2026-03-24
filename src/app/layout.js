@@ -7,6 +7,17 @@ export const metadata = {
   title: 'MindRoots — AI Belief Archaeology',
   description: 'Excavate the hidden origins of your limiting beliefs through AI-powered voice interviews. Discover your Belief Origin Tree.',
   keywords: 'belief archaeology, AI therapy, limiting beliefs, cognitive patterns, mindset',
+  icons: {
+    icon: [
+      { url: '/favicon.ico' },
+      { url: '/favicon-96x96.png', sizes: '96x96', type: 'image/png' },
+      { url: '/favicon.svg', type: 'image/svg+xml' }
+    ],
+    apple: [
+      { url: '/apple-touch-icon.png', sizes: '180x180' }
+    ]
+  },
+  manifest: '/site.webmanifest',
 }
 
 export const viewport = {
