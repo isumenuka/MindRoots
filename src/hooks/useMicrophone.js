@@ -74,6 +74,7 @@ export default function useMicrophone(sampleRate = 16000) {
       console.error('Microphone error:', err);
       setError(err.message || 'Microphone error');
       setIsCapturing(false);
+      throw err;
     }
   }, [sampleRate]);
 

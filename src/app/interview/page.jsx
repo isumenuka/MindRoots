@@ -243,15 +243,24 @@ export default function InterviewPage() {
 
       try {
         await svc.startSession()
-        if (cancelled) { svc.endSession(); liveServiceRef.current = null; return }
+      } catch (err) {
+        console.error('[Interview] Failed to start Gemini session:', err)
+        liveServiceRef.current = null
         clearTimeout(connectionTimerRef.current)
-        liveServiceRef.current = svc
-        sessionActiveRef.current = true
-        setAgentStatus('active')
-        
-        // Play the intro session swelling sound
-        audioManager.play('session-enter.mp3', 0.5)
+        setConnectionError(err.message || 'Failed to start session')
+        return
+      }
 
+      if (cancelled) { svc.endSession(); liveServiceRef.current = null; return }
+      clearTimeout(connectionTimerRef.current)
+      liveServiceRef.current = svc
+      sessionActiveRef.current = true
+      setAgentStatus('active')
+      
+      // Play the intro session swelling sound
+      audioManager.play('session-enter.mp3', 0.5)
+
+      try {
         await svc.triggerAgentStart()
 
         // Start mic and watch for physical disconnect
@@ -285,8 +294,8 @@ export default function InterviewPage() {
         }, 30000)
 
       } catch (err) {
-        console.error('[Interview] Failed to start:', err)
-        setMicError(err.message)
+        console.error('[Interview] Failed to start microphone:', err)
+        setMicError(err.message || 'Microphone access denied')
         setAgentStatus('active')
         setShowTextInput(true)
       }
@@ -524,13 +533,15 @@ export default function InterviewPage() {
           {/* Status text */}
           <div className="text-center">
             {micError && (
-              <p className="text-amber-400 text-sm mb-2 flex items-center gap-1.5">
+              <p className="text-amber-400 text-sm mb-2 flex justify-center items-center gap-1.5">
                 <span className="material-symbols-outlined text-[16px]">warning</span>
                 Microphone unavailable — type your responses below
               </p>
             )}
             <p className="font-display text-xl md:text-2xl font-medium text-white max-w-2xl leading-relaxed">
-              {statusLabels[agentStatus] || 'Ready'}
+              {(agentStatus === 'active' || agentStatus === 'listening') && (!isCapturing && micError)
+                ? 'Following your text responses...'
+                : statusLabels[agentStatus] || 'Ready'}
             </p>
             <p className="text-slate-400 mt-1 text-sm">
               {agentStatus === 'connecting' ? 'Establishing secure session...' : 'MindRoots is analyzing the patterns in your narrative.'}
@@ -615,16 +626,22 @@ export default function InterviewPage() {
         <div className="flex gap-3 items-center">
           {/* Mic */}
           <button
-            onClick={() => {
+            onClick={async () => {
               if (isCapturing) {
                 audioManager.play('mic-off.wav', 0.4)
                 stopMic()
               } else {
                 audioManager.play('mic-on.wav', 0.4)
-                startMic(
-                  (pcm16) => liveServiceRef.current?.sendAudio?.(pcm16),
-                  () => liveServiceRef.current?.sendAudioStreamEnd?.()
-                )
+                try {
+                  await startMic(
+                    (pcm16) => liveServiceRef.current?.sendAudio?.(pcm16),
+                    () => liveServiceRef.current?.sendAudioStreamEnd?.()
+                  )
+                  setMicError(null)
+                  setMicDisconnected(false)
+                } catch (err) {
+                  setMicError(err.message || 'Microphone access denied')
+                }
               }
             }}
             className={`size-14 rounded-full flex items-center justify-center hover:scale-105 transition-transform ${
