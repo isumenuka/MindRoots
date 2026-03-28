@@ -8,11 +8,6 @@ RUN npm ci
 # Copy all source files
 COPY . .
 
-# Set build arguments for frontend environment variables
-ARG NEXT_PUBLIC_APP_URL
-ARG NEXT_PUBLIC_BACKEND_URL
-ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
-ENV NEXT_PUBLIC_BACKEND_URL=$NEXT_PUBLIC_BACKEND_URL
 
 # Build Next.js app (standalone output)
 RUN npm run build

@@ -12,3 +12,4 @@ __pycache__/
 
 # Explicitly do NOT ignore .env.local because Cloud Build needs it for Next.js build
 !.env.local
+!.env.production
